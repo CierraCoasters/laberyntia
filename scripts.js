@@ -1025,11 +1025,11 @@ function fsCommand (cmd, args) {
 				game_status.result = game_status.result * 2;
 			}
 			if (game_status.personajes[game_status.jugador].proxima == "impar") {
-				if (args % 2 == 0) {
+				if (game_status.result % 2 == 0) {
 					loadNextPlayer();
 					break;
 				} else {
-					game_status.personajes[game_status.jugador].proxima == ""
+					game_status.personajes[game_status.jugador].proxima = "";
 				}
 			}
 			calcularCasillasActivadas();

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Laberyntia</title>
+		<script src="ruffle/ruffle.js"></script>
+		<script src="midi/MIDILoader.js"></script>
+		<link rel="stylesheet" href="styles.css">
+	</head>
+	<body>
+		<div id="game_area">
+			<div id="start">
+				<div class="start_btn">Empezar juego</div>
+				<div class="notes_btn">Notas sobre el port</div>
+				<div class="notes">
+					<p>La página que tienes delante es un port del juego "Laberyntia" de Terra Mítica para web (HTML5).</p>
+					<p>El juego original consistía en un ejecutable de Flash Player modificado y varios archivos de Flash. Gracias a <a href="https://ruffle.rs/">Ruffle</a>, podemos recuperar los archivos Flash y hacerlos funcionar en la web.<br/>
+						El problema es que el código del ejecutable de Flash Player modificado (probablemente C++) no es fácil de recuperar, y es el que controla el juego, por lo que todo ha tenido que ser reimplementado en JavaScript.<br/>
+						También ha sido necesario modificar algunos de los archivos Flash con <a href="https://github.com/jindrapetrik/jpexs-decompiler">JPEXS Free Flash Decompiler</a> para poder controlarlos correctamente desde este código JavaScript.</p>
+					<p>Esto ha permitido cambios y correcciones, pero implica que el juego puede no funcionar completamente igual que lo hacía.<br/>
+						Algunos fallos conocidos en esta versión son:</p>
+					<ul>
+						<li>Falta la función de zoom del tablero de juego.</li>
+						<li>Faltan algunas de las preguntas tipo trivial originales del juego, y no funcionan exactamente igual. No se pueden extraer fácilmente del juego original.</li>
+						<li>El formulario de crear partida no permite escribir en él tras volver al menú desde una partida anterior. Recarga la página para poder escribir en él de nuevo.</li>
+						<li>Tras jugar mucho mucho rato, la página se puede volver un poco lenta, aparentemente por un error de limpieza incompleta de los archivos Flash que se van cerrando. Guarda la partida, cierra la pestaña y vuelve a abrir esta página en una pestaña nueva para que vuelva a la normalidad.</li>
+						<li>La música de fondo (midi) puede hacer cosas raras cuando la pestaña pierde el foco y cuando lo recupera.</li>
+						<li>La función de guardado y cargado de partidas no se ha probado aún exhaustivamente en todos los casos posibles.</li>
+					</ul>
+					<p>Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.</p>
+					<p>Por último, este port no tiene por intención vulnerar la propiedad intelectual de nadie. No se reclama la propiedad sobre los archivos originales del juego, sólo sobre el código nuevo desarrollado específicamente para el port (HTML, CSS y JavaScript y algunas funciones de ActionScript (Flash) para permitir la comunicación entre el código anterior y los archivos Flash originales), que se publica con licencia CC BY-NC-SA 4.0.<br/>
+						Este juego es un claro ejemplo de <a href="https://en.wikipedia.org/wiki/Abandonware">Abandonware</a>, ya que hace años que no está a la venta (no genera ingresos a sus creadores), hay muy pocas unidades originales en circulación y además, el juego original ya no funciona en versiones modernas de Windows.<br/>
+						El único objetivo de este port es recuperar una pequeña y poco conocida parte de la historia de Terra Mítica.</p>
+					<ul>
+						<li>Créditos del port: CierraCoasters (@cierracoasters <a href="https://www.youtube.com/@cierracoasters">[YT]</a> <a href="https://www.instagram.com/cierracoasters">[IG]</a>): David (programación) y Álvaro (difusión y pruebas).<br/>
+							Código específico del port licenciado con <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es">CC BY-NC-SA 4.0</a>. Contáctanos si necesitas otra licencia.</li>
+						<li>Créditos del juego original: Ver en el propio juego. Subido a <a href="https://archive.org/details/laberyntia">Internet Archive por crarchive</a>. (Gracias a todos ellos.)</li>
+						<li>Bibliotecas de código abierto incluidas: <a href="https://www.ruffle.rs">Ruffle</a> (<a href="https://github.com/ruffle-rs/ruffle/blob/master/LICENSE.md">licencia MIT</a>) y <a href="https://surikov.github.io/webaudiofont/">WebAudioFont</a> (<a href="https://github.com/ruffle-rs/ruffle/blob/master/LICENSE.md">licencia GNU GPL 3</a>).</li>
+					</ul>
+				</div>
+			</div>
+			<div id="intro">
+				<video></video>
+			</div>
+			<div id="game_window">
+				<img class="background">
+				<div id="codigo"><span>Código de registro en la web:</span><br/><span id="secreto"></span></div>
+				<div class="new_game">
+					<template id="player_form_template">
+						<div class="player_form">
+							<div class="nombre_nivel"></div>
+							<input class="nombre" type="text">
+							<select class="nivel">
+								<option value="1">Principiante</option>
+								<option value="2" selected>Medio</option>
+								<option value="3">Avanzado</option>
+							</select>
+						</div>
+					</template>
+					<div class="player_forms"></div>
+					<div class="comenzar"></div>
+					<div class="info"></div>
+					<div class="zoom"></div>
+					<div class="back"></div>
+				</div>
+				<div class="game_ui">
+					<div class="nombre">Nombre</div>
+					<div class="nivel">Nivel</div>
+					<div class="lugar">Lugar</div>
+					<div class="personaje"></div>
+					<div class="fenix"></div>
+					<div class="vida">3</div>
+					<div class="medallon">
+						<div class="roma hidden"></div>
+						<div class="grecia hidden"></div>
+						<div class="islas hidden"></div>
+						<div class="iberia hidden"></div>
+						<div class="egipto hidden"></div>
+					</div>
+					<div class="minoRnd">
+						<div class="minoRndTxt">5</div>
+					</div>
+					<div class="volumen"></div>
+					<div class="zoom"></div>
+					<div class="back"></div>
+				</div>
+				<div id="flash"></div>
+				<div class="video">
+					<video></video>
+				</div>
+				<audio class="audio"></audio>
+			</div>
+		</div>
+		<script src="scripts.js"></script>
+	</body>
+</html>

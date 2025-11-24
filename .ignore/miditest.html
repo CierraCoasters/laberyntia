@@ -1,0 +1,36 @@
+<html>
+
+<head>
+	<script src='../midi/MIDILoader.js'></script>
+</head>
+
+<body>
+	<div>
+		<button class="pl0">Preload M0</button>
+		<button class="pl1">Preload M1</button>
+		<button class="pl2">Preload M2</button>
+	</div>
+	<div>
+		<button class="lp0">Play M0</button>
+		<button class="lp1">Play M1</button>
+		<button class="lp2">Play M2</button>
+	</div>
+	<div>
+		<button class="pauseToggle">Pause/Resume</button>
+		<button class="pause">Pause</button>
+		<button class="resume">Resume</button>
+	</div>
+	<script>
+		document.querySelector(".pl0").addEventListener("click", (o,e) => midiLoad("../sonidos/m0.MID",false));
+		document.querySelector(".pl1").addEventListener("click", (o,e) => midiLoad("../sonidos/m1.MID",false));
+		document.querySelector(".pl2").addEventListener("click", (o,e) => midiLoad("../sonidos/m2.MID",false));
+		document.querySelector(".lp0").addEventListener("click", (o,e) => midiLoad("../sonidos/m0.MID",true));
+		document.querySelector(".lp1").addEventListener("click", (o,e) => midiLoad("../sonidos/m1.MID",true));
+		document.querySelector(".lp2").addEventListener("click", (o,e) => midiLoad("../sonidos/m2.MID",true));
+		document.querySelector(".pauseToggle").addEventListener("click", (o,e) => midiPauseToggle());
+		document.querySelector(".pause").addEventListener("click", (o,e) => midiPause());
+		document.querySelector(".resume").addEventListener("click", (o,e) => midiResume());
+	</script>
+</body>
+
+</html>

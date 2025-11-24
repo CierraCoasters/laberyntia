@@ -1,0 +1,440 @@
+body {
+	width: 100dvw;
+	height: 100dvh;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background-color: black;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	overflow: hidden;
+}
+#game_area {
+	width: 100%;
+	aspect-ratio: 4/3;
+	margin: auto;
+	padding: 0;
+	border: 0;
+	background-color: white;
+	font-family: sans-serif;
+}
+@media (min-aspect-ratio: 4/3) {
+	body {
+		flex-direction: row;
+	}
+	#game_area {
+		width: auto;
+		height: 100%;
+	}
+}
+#game_area * {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+#start, #intro, #game_window {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	position: relative;
+}
+#start {
+	background-image: url("imagenes/artwork.png");
+	background-position: center;
+	background-size: contain;
+	background-repeat: no-repeat;
+	container: start_area / size;
+
+	& > .start_btn {
+		background-color: green;
+		border: 1px solid darkgreen;
+		top: 78%;
+		font-size: 6cqh;
+	}
+
+	& > .notes_btn {
+		background-color: blue;
+		border: 1px solid darkblue;
+		top: 21%;
+		font-size: 4.5cqh;
+	}
+
+	& > div {
+		position: absolute;
+		width: auto;
+		height: auto;
+		cursor: pointer;
+		padding: 4cqh;
+		left: 50%;
+		transform: translate(-50%,-50%);
+		border-radius: 8cqh; /* font-size / 2 + padding */
+		color: white;
+	}
+
+	& > .notes {
+		top: 5%;
+		bottom: 5%;
+		left: 5%;
+		right: 5%;
+		transform: initial;
+		padding-block: 2cqh;
+		font-size: 2cqh;
+		background-color: rgba(.5,.5,.5,.75);
+
+		& > p, & > ul, & > li {
+			width: initial;
+			height: initial;
+			margin: 1cqh;
+			padding: initial;
+			border: initial
+		}
+
+		& a, & a:visited {
+			color: white;
+		}
+
+		& a:hover {
+			color: lightgrey;
+		}
+
+		& > ul {
+			margin-inline: 4cqh;
+		}
+	}
+}
+#game_window {
+	& > * {
+		position: absolute;
+		top: 0;
+		left: 0;
+	}
+	#flash, .video {
+		width: auto;
+		height: auto;
+		top: 8%;
+		bottom: 8%;
+		left: 31%;
+		right: 6%;
+
+		&.big {
+			top: 16%;
+			bottom: 8%;
+			left: 23%;
+			right: 6%;
+		}
+	}
+
+	#codigo {
+		width: auto;
+		height: auto;
+		top: 84%;
+		bottom: 2%;
+		left: 2%;
+		right: 85%;
+		container: codigo / size;
+		font-weight: bold;
+
+		& > * {
+			font-size: 18cqh;
+		}
+	}
+
+	.new_game {
+		.comenzar {
+			top: 87%;
+			bottom: 6%;
+			left: 68%;
+			right: 10%;
+
+			background-image: url('imagenes/btncm0.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&[invalid]:hover {
+				cursor: not-allowed;
+			}
+
+			&:hover {
+				background-image: url('imagenes/btncm1.bmp');
+			}
+		}
+		.info {
+			top: 33.7%;
+			bottom: 30%;
+			left: 0%;
+			right: 83.5%;
+
+			background-image: url('imagenes/nocont.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			opacity: 0%;
+		}
+		&:has(.comenzar[invalid]:hover) .info {
+			opacity: 100%;
+		}
+
+		.player_forms {
+			top: 0;
+			bottom: 0;
+			left: 0;
+			right: 0;
+		}
+		.player_form {
+			position: absolute;
+			width: 20%;
+			height: 12%;
+			container: player_form / size;
+			& > * {
+				height: 25%;
+			}
+			& > div {
+				margin-bottom: 5%;
+
+				background-image: url('imagenes/cmnyn.bmp');
+				background-size: contain;
+				background-position: left;
+				background-repeat: no-repeat;
+			}
+			& > input {
+				font-size: 18cqh;
+				margin-bottom: 5%;
+				z-index: 1000;
+			}
+			& > select {
+				font-size: 18cqh;
+			}
+		}
+		.player_form:nth-child(6n+1) {
+			top: 23%;
+			left: 22%;
+		}
+		.player_form:nth-child(6n+2) {
+			top: 46%;
+			left: 22%;
+		}
+		.player_form:nth-child(6n+3) {
+			top: 69%;
+			left: 22%;
+		}
+		.player_form:nth-child(6n+4) {
+			top: 23%;
+			left: 58%;
+		}
+		.player_form:nth-child(6n+5) {
+			top: 46%;
+			left: 58%;
+		}
+		.player_form:nth-child(6n+6) {
+			top: 69%;
+			left: 58%;
+		}
+	}
+	.game_ui {
+		color: white;
+		container: game_ui / size;
+
+		.nombre, .nivel, .lugar, .vida {
+			left: 3%;
+			width: 20%;
+			height: 3%;
+			font-size: 2cqh;
+		}
+		.nombre {
+			top: 15%;
+		}
+		.nivel {
+			top: 21.5%;
+		}
+		.lugar {
+			top: 27.5%;
+		}
+		.vida {
+			top: 68.6%;
+			left: 6%;
+			width: 18%;
+		}
+		.volumen {
+			bottom: 33.5%;
+			left: 22.5%;
+			width: 3%;
+			height: 4%;
+			
+			background-image: url('imagenes/snd1.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&.muted {
+				background-image: url('imagenes/snd0.bmp');
+			}
+		}
+		.minoRnd {
+			top: 33%;
+			left: 1.5%;
+			width: 23.5%;
+			height: 38%;
+			
+			background-image: url('imagenes/rnd.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			& > .minoRndTxt {
+				position: absolute;
+				top: 32%;
+				left: 32.5%;
+				width: 45%;
+				height: 13%;
+
+				font-size: 4cqh;
+				text-align: center;
+			}
+		}
+		.personaje {
+			top: 10.2%;
+			left: 13.3%;
+			width: 12.6%;
+			height: 22.2%;
+			
+			background-image: url('imagenes/pr0.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&.pr0 {
+				background-image: url('imagenes/pr0.bmp');
+			}
+			&.pr1 {
+				background-image: url('imagenes/pr1.bmp');
+			}
+			&.pr2 {
+				background-image: url('imagenes/pr2.bmp');
+			}
+			&.pr3 {
+				background-image: url('imagenes/pr3.bmp');
+			}
+			&.pr4 {
+				background-image: url('imagenes/pr4.bmp');
+			}
+			&.pr5 {
+				background-image: url('imagenes/pr5.bmp');
+			}
+			&.pr6 {
+				background-image: url('imagenes/pr6.bmp');
+			}
+		}
+		.fenix {
+			bottom: 0;
+			left: 0;
+			width: 26.9%;
+			height: 33.4%;
+			
+			background-image: url('imagenes/fx1.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&.fx1 {
+				background-image: url('imagenes/fx1.bmp');
+			}
+			&.fx2 {
+				background-image: url('imagenes/fx2.bmp');
+			}
+			&.fx3 {
+				background-image: url('imagenes/fx3.bmp');
+			}
+			&.fx4 {
+				background-image: url('imagenes/fx4.bmp');
+			}
+			&.fx5 {
+				background-image: url('imagenes/fx5.bmp');
+			}
+		}
+		.medallon {
+			top: 35.8%;
+			bottom: 39.7%;
+			left: 3.4%;
+			right: 77.6%;
+
+			& > * {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+			
+				background-size: contain;
+				background-position: center;
+				background-repeat: no-repeat;
+			}
+		
+			.roma {
+				background-image: url('imagenes/med1.gif');
+			}
+			.grecia {
+				background-image: url('imagenes/med2.gif');
+			}
+			.islas {
+				background-image: url('imagenes/med3.gif');
+			}
+			.iberia {
+				background-image: url('imagenes/med4.gif');
+			}
+			.egipto {
+				background-image: url('imagenes/med5.gif');
+			}
+		}
+		.zoom {
+			bottom: 0;
+			left: 23%;
+			width: 4%;
+			height: 8%;
+			
+			background-image: url('imagenes/lp0.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&:hover {
+				background-image: url('imagenes/lp1.bmp');
+			}
+		}
+		.back {
+			bottom: 0 !important;
+			left: 0 !important;
+		}
+	}
+	.new_game, .game_ui {
+		& > * {
+			position: absolute;
+			width: auto;
+			height: auto;
+		}
+		.back {
+			bottom: 5%;
+			left: 4%;
+			width: 6%;
+			height: 6%;
+			
+			background-image: url('imagenes/mn0.bmp');
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+
+			&:hover {
+				background-image: url('imagenes/mn1.bmp');
+			}
+		}
+	}
+}
+.hidden {
+	display: none;
+}

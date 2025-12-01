@@ -1,22 +1,20 @@
 // Original source (heavily modified) and dependencies: https://surikov.github.io/webaudiofont/
 
-// Add required libraries
+// (Wrapped in function to control scope)
 (function () {
 	// Obtain this script's base path (Source: https://stackoverflow.com/questions/2161159/get-script-path)
 	let scripts = document.getElementsByTagName('script');
 	let thisBase = scripts[scripts.length-1].src.split('?')[0].split('/').slice(0, -1).join('/')+'/'; // Remove query arguments and filename
-
-	function dynamicallyLoadScript(url) {
+	
+	// Add required libraries
+	function dynamicallyLoadScript(url,actionOnLoad) {
 		var script = document.createElement("script");
 		script.src = url;
+		if (actionOnLoad) script.onload = actionOnLoad;
 		document.head.appendChild(script);
 	}
-	dynamicallyLoadScript(thisBase + 'WebAudioFontPlayer.js');
-	dynamicallyLoadScript(thisBase + 'MIDIFile.js');
-})();
+	dynamicallyLoadScript(thisBase + 'WebAudioFontPlayer.js',dynamicallyLoadScript(thisBase + 'MIDIFile.js',declarePublicFunctions()));
 
-// MIDI functionality (wrapped in function to control scope)
-(function () {
 	var loadedSongs = [];
 	var currentSong = null;
 	var isPlaying = false;
@@ -172,11 +170,17 @@
 		currentSong = null;
 	}
 
-	// Expose public functions
-	window.midiLoad = loadMidi;
-	window.midiPauseToggle = pauseResumeMidi;
-	window.midiPause = pauseMidi;
-	window.midiResume = resumeMidi;
-	window.midiStop = stopMidi;
-	window.currentMidi = function () {return currentSong;}
+	function declarePublicFunctions () {
+		// Expose public functions
+		window.midiLoad = loadMidi;
+		window.midiPauseToggle = pauseResumeMidi;
+		window.midiPause = pauseMidi;
+		window.midiResume = resumeMidi;
+		window.midiStop = stopMidi;
+		window.currentMidi = function () {return currentSong;}
+
+		console.log(window.onMidiFunctionsLoaded);
+		if (window.onMidiFunctionsLoaded) window.onMidiFunctionsLoaded();
+		window.midiFunctionsLoaded = true;
+	}
 })();

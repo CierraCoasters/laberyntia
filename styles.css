@@ -83,7 +83,7 @@ body {
 		right: 5%;
 		transform: initial;
 		padding-block: 2cqh;
-		font-size: 2cqh;
+		font-size: 2.2cqh;
 		background-color: rgba(.5,.5,.5,.75);
 
 		& > p, & > ul, & > li {
@@ -116,16 +116,33 @@ body {
 	#flash, .video {
 		width: auto;
 		height: auto;
-		top: 8%;
-		bottom: 8%;
-		left: 31%;
-		right: 6%;
 
-		&.big {
+		&[data-size="f0"], &[data-size="f1"] {
 			top: 16%;
 			bottom: 8%;
 			left: 23%;
 			right: 6%;
+		}
+
+		&[data-size="f21"] {
+			top: 12%;
+			bottom: 12%;
+			left: 34%;
+			right: 9%;
+		}
+
+		&[data-size="f22"] {
+			top: 8%;
+			bottom: 8%;
+			left: 31%;
+			right: 6%;
+		}
+
+		&[data-size="f23"] {
+			top: 3.5%;
+			bottom: 3.5%;
+			left: 28%;
+			right: 3%;
 		}
 	}
 

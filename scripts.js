@@ -1,22 +1,56 @@
 const DEBUG = false;
 
 // TODO ENH implementar zoom tablero (requiere externalinterface y actionscript) (original permite arrastrar para mover)
-// TODO IMP recuperar partida (si se detecta partida a medias)
-// TODO IMP las preguntas originales parecen ser temáticas por área, permitir asignar cada una a un área y dejar algunas comunes
-// TODO IMP las preguntas no se deben repetir
+// TODO FIX congelar o desactivar ruleta tras comando "ruleta" (se puede cambiar la selección durante la narración)
 // TODO IMP [en lento progreso] extraer lista de preguntas reales
 // TODO CHK comprobar qué pasa con el nivel del jugador
-// TODO OFX solucionar acumulación de eventos en elemento html. No se añaden con addEventListener y los eventos siguen siendo null, pero están ahí y bloquean el input (onkeydown)
-// TODO OFX investigar por qué la página "se ahoga" - parece relacionado con cargar archivos flash, pero no parece culpa de Ruffle
-// TODO OFX congelar tablero o desactivar casillas tras comando "c" (falla) y ruleta tras comando "ruleta" (se puede cambiar la selección durante la narración)
-// TODO OFX los avanzar el doble son en dos tiempos (minopilla puede cortar el segundo tiempo, y permite cambiar de dirección en cruces)
-// TODO OFX congelar música al perder el foco
-// TODO TST mantener un ojo sobre la función de guardado y cargado de partidas
+// TODO MNT función de guardado y cargado de partidas
+// TODO MNT a veces no se detiene la música al empezar otra nueva (especialmente de nueva partida a partida)
+// TODO MNT limpieza incorrecta de archivos Flash. Probablemente provocaba que la página "se ahogase" tras un rato
+// TODO ADD más preguntas personalizadas (nuevas) y opción para activarlas
 
-// Lo primero precargar las músicas de fondo para que estén listas cuando deben
-midiLoad("sonidos/m0.MID");
-midiLoad("sonidos/m1.MID");
-midiLoad("sonidos/m2.MID");
+// Lo primero de todo, establecer un sistema para capturar los eventos creados por Ruffle al cargar Flash y poder revocarlos manualmente cuando se cierra el Flash
+let isCapturingEvents = false;
+let capturedEventsList = [];
+var f = EventTarget.prototype.addEventListener;
+EventTarget.prototype.addEventListener = function(type, fn, capture) {
+	this.f = f;
+	this.f(type, fn, capture);
+	if (isCapturingEvents) {
+		capturedEventsList.push({element:this,type:type,fn:fn,capture:capture});
+	}
+}
+function startCapturingEvents () {
+	isCapturingEvents = true;
+}
+function stopCapturingEvents () {
+	isCapturingEvents = false;
+}
+function revokeCapturedEvents () {
+	isCapturingEvents = false;
+	for (let i = 0; i < capturedEventsList.length; i++) {
+		let eventToRemove = capturedEventsList[i];
+		eventToRemove.element.removeEventListener(eventToRemove.type,eventToRemove.fn,eventToRemove.capture);
+	}
+	capturedEventsList = [];
+}
+
+// Establecer un evento para precargar las músicas de fondo cuanto antes para que estén listas cuando deben
+window.onMidiFunctionsLoaded = function () {
+	midiLoad("sonidos/m0.MID");
+	midiLoad("sonidos/m1.MID");
+	midiLoad("sonidos/m2.MID");
+};
+if (window.midiFunctionsLoaded) window.onMidiFunctionsLoaded(); // Si ya estaba todo el MIDI cargado, ejecutamos directamente
+document.addEventListener("visibilitychange", function() {
+	if (!game_status.muted) {
+		if (document.hidden){
+			midiPause();
+		} else {
+			midiResume();
+		}
+	}
+});
 
 let niveles = ["Principiante", "Medio", "Avanzado", "Mítico"];
 game_status = {nEquipo: 2, personajes: [], jugador: 0, result: 0, ended: false, rondas: 0, sCode: "",
@@ -37,102 +71,114 @@ retos.Egipto   = {juego: "Egipto"  , ayuda: "iegipto"  , ganar: "fb5#.webm"  , p
 retos.Final    = {juego: "final"   , ayuda: "ifinal"   , ganar: "fganar.webm", perder: "fmal.webm"};
 
 // TODO seguir extrayendo lista de preguntas reales (Egipto y Grecia tienen que estar casi completos)
-let lista_preguntas = [
-// SET DE TEST
-	//{pregunta: "Pregunta de prueba 1", respuesta1: "Respuesta A (correcta)", respuesta2: "Respuesta B", respuesta3: "Respuesta C", correcta: 1},
-	//{pregunta: "Pregunta de prueba 2", respuesta1: "Respuesta A", respuesta2: "Respuesta B (correcta)", respuesta3: "Respuesta C", correcta: 2},
-	//{pregunta: "Pregunta de prueba 3", respuesta1: "Respuesta A", respuesta2: "Respuesta B", respuesta3: "Respuesta C (correcta)", correcta: 3},
-// SET REAL
-// Egipto
-	{pregunta: "La moda de las túnicas con pliegues en Egipto...", respuesta1: "fue pasajera", respuesta2: "duró 1500 años", respuesta3: "se impuso copiada a los romanos", correcta: 1},
-	{pregunta: "Las flechas de los ejércitos más antiguos de Egipto tenían las puntas de...", respuesta1: "bronce", respuesta2: "sílex", respuesta3: "madera", correcta: 2},
-	{pregunta: "Al morir, los egipcios eran...", respuesta1: "quemados", respuesta2: "embalsamados", respuesta3: "arrojados al río", correcta: 2},
-	{pregunta: "¿Qué importante innovación, procedente de Oriente Medio, introdujeron los egipcios en su ejército?", respuesta1: "Los elefantes", respuesta2: "Las catapultas", respuesta3: "El carro de combate", correcta: 3},
-	{pregunta: "Alejandría fue fundada por...", respuesta1: "Julio César", respuesta2: "Cleopatra", respuesta3: "Alejandro Magno", correcta: 3},
-	{pregunta: "¿De qué material eran las faldillas corrientes que llevaban los egipcios?", respuesta1: "Lino", respuesta2: "Algodón", respuesta3: "Papiro", correcta: 1},
-	{pregunta: "Las pirámides mejor conservadas son...", respuesta1: "las más antiguas", respuesta2: "las más modernas", respuesta3: "las más pequeñas", correcta: 1},
-	{pregunta: "Según el Libro de los Muertos, ¿qué parte del cuerpo pesaba el dios Annubis para saber si el difunto podía entrar en el paraíso?", respuesta1: "El corazón", respuesta2: "El cerebro", respuesta3: "Los pulmones", correcta: 1},
-	{pregunta: "¿Qué insecto era venerado por los egipcios?", respuesta1: "El saltamontes", respuesta2: "La mariquita", respuesta3: "El escarabajo", correcta: 3},
-	{pregunta: "¿Por qué los ladrillos cocidos, más resistentes y fáciles de decorar, escasean en el antiguo Egipto?", respuesta1: "Porque se los llevaban los saqueadores de tumbas", respuesta2: "Porque eran considerados sagrados", respuesta3: "Porque escaseaba la madera para los hornos", correcta: 3},
-	{pregunta: "¿Cuál de estos edificios es el de menor altura?", respuesta1: "La estatua de la Libertad", respuesta2: "La pirámide de Keops", respuesta3: "La torre Eiffel", correcta: 1},
-	{pregunta: "¿De qué animal se han encontrado más momias?", respuesta1: "Perro", respuesta2: "Cocodrilo", respuesta3: "Gato", correcta: 3},
-	{pregunta: "Si caes en la casilla de El Puerto de Alejandría, ¿dónde aparecerás?", respuesta1: "En la casilla de La Furia de Tritón", respuesta2: "En la casilla de El Moll", respuesta3: "En la casilla de El Vuelo del Fénix", correcta: 2},
-	{pregunta: "¿Qué dos alimentos eran básicos en la dieta de un egipcio?", respuesta1: "La patata y la cebolla", respuesta2: "La lechuga y el tomate", respuesta3: "El pan y la cerveza", correcta: 3},
-	{pregunta: "¿Quiénes tienen un romántico encuentro en Egipto?", respuesta1: "Marco Antonio y Cleopatra", respuesta2: "Las arañas y las arpías", respuesta3: "Cleopatra y Ulises", correcta: 1},
-	{pregunta: "¿Qué es lo que se compra para comer y no se come?", respuesta1: "La sopa", respuesta2: "La cuchara", respuesta3: "La bebida", correcta: 2}, // Posible grupo común
-	{pregunta: "¿Dónde puedes ver una estatua de la Dama de Elche?", respuesta1: "En Iberia", respuesta2: "En Roma", respuesta3: "En Egipto", correcta: 1}, // Posible grupo común
-	{pregunta: "¿Cuántas puntas tiene la rosa de los vientos de Terra Mítica?", respuesta1: "6", respuesta2: "8", respuesta3: "233", correcta: 2}, // Posible grupo común
-	{pregunta: "Con madera de pino, de haya o de nogal construyo los muebles para tu hogar.", respuesta1: "El arquitecto", respuesta2: "El albañil", respuesta3: "El carpintero", correcta: 3}, // Posible grupo común
-	//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
-// Iberia
-	{pregunta: "Raza de perro de gran tamaño, los machos pesan alrededor de 75 kg., introducida en España por los fenicios", respuesta1: "Setter irlandés", respuesta2: "Mastín español", respuesta3: "San Bernardo", correcta: 2},
-	{pregunta: "¿En qué civilización se encuentra Arriarix?", respuesta1: "Grecia", respuesta2: "Iberia", respuesta3: "Roma", correcta: 1}, // Posible grupo común
-	{pregunta: "Si caes en la casilla de El Moll, ¿dónde apareces?", respuesta1: "En la casilla de El Puerto de Alejandría", respuesta2: "En la casilla de La Furia de Tritón", respuesta3: "En la casilla de Akuatiti", correcta: 1},
-	{pregunta: "Tierra llana y fértil generalmente regada por un río.", respuesta1: "Páramo", respuesta2: "Llaneza", respuesta3: "Vega", correcta: 3},
-	{pregunta: "Las fachadas de las casas de los pueblos solían estar pintadas por fuera de blanco porque...", respuesta1: "es un color muy económico", respuesta2: "es agradable a la vista", respuesta3: "absorbe menos el calor del Sol", correcta: 3},
-	{pregunta: "Las tejas de barro cocido y forma curva se conocen como...", respuesta1: "tejas francesas", respuesta2: "tejas morunas", respuesta3: "tejas inglesas", correcta: 2},
-	//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
-// Las Islas
-	{pregunta: "Los cretenses pescaban el pulpo en las rocas de la costa con...", respuesta1: "arpones", respuesta2: "cañas de pescar", respuesta3: "con la mano", correcta: 1},
-	{pregunta: "¿Cómo se llamaba la esposa del rey griego raptada por Paris, príncipe de Troya?", respuesta1: "Irene", respuesta2: "Sofía", respuesta3: "Helena", correcta: 3}, // También en Egipto
-	{pregunta: "En la guerra de troya venció el ejército...", respuesta1: "troyano", respuesta2: "griego", respuesta3: "persa", correcta: 2},
-	{pregunta: "En el siglo XIV a.C. la influencia micénica se difundió por todo el mar...", respuesta1: "Mediterráneo", respuesta2: "Egeo", respuesta3: "Jónico", correcta: 2},
-	{pregunta: "El legendario rey Minos mandó construir el palacio de...", respuesta1: "Cnosos", respuesta2: "Versalles", respuesta3: "Esmirna", correcta: 1},
-	{pregunta: "La cultura cretense se extendió por islas que en la actualidad pertenecen a Grecia y a...", respuesta1: "Francia", respuesta2: "Italia", respuesta3: "Turquía", correcta: 3},
-	{pregunta: "¿Qué relación existe entre el nombre de Arthur Evans y Creta?", respuesta1: "Fue el arqueólogo que excavó en Cnosos", respuesta2: "Escribió una novela sobre el Minotauro", respuesta3: "Montó una secta de adoradores del toro", correcta: 1},
-	{pregunta: "Si viajaras en la actualidad a las ruinas de Troya, te harías entender en...", respuesta1: "turco", respuesta2: "griego", respuesta3: "italiano", correcta: 1},
-	{pregunta: "La civilización minoica se desarrolló en la isla de...", respuesta1: "Chipre", respuesta2: "Creta", respuesta3: "Malta", correcta: 2},
-	{pregunta: "¿En qué se basaba la economía de Troya?", respuesta1: "Espectáculos y pasatiempos", respuesta2: "Agricultura, comercio y artesanía", respuesta3: "Minería y piratería", correcta: 2},
-	{pregunta: "En la lidia, a los cuernos del toro se les denomina...", respuesta1: "cuernos", respuesta2: "cuernas", respuesta3: "pitones", correcta: 3},
-	//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
-// Roma
-	{pregunta: "¿Cuál era el lugar favorito de ocio para los romanos donde, además, practicaban deportes y tomaban baños?", respuesta1: "El estadio", respuesta2: "El anfiteatro", respuesta3: "Las termas", correcta: 3},
-	{pregunta: "De Roma se decía que para dormir hacía falta mucho dinero porque...", respuesta1: "el precio de las camas era muy elevado", respuesta2: "se pagaba un impuesto por esta actividad", respuesta3: "sólo una gran casa podía aislarse del ruido", correcta: 3},
-	{pregunta: "Una mujer rica romana...", respuesta1: "nunca se arreglaba para salir", respuesta2: "sólo se pintaba los ojos", respuesta3: "necesitaba 3 horas y 4 esclavas para acicalarse", correcta: 3},
-	{pregunta: "¿Qué método utilizaban los ricos y los gobernantes para desplazarse rápidamente entre la multitud que atiborraba las calles de Roma?", respuesta1: "Carros tirados por cuatro caballos", respuesta2: "Corrían a pie entre la multitud", respuesta3: "Literas llevadas por cuatro esclavos", correcta: 1},
-	{pregunta: "¿Cómo se llamaba el hijo de Julio César y Cleopatra?", respuesta1: "Cesáreo", respuesta2: "Cesarión", respuesta3: "Cleopatro", correcta: 2},
-	{pregunta: "Además de ser de familia rica, ¿qué cualidad debía tener un romano para ser admitido en el senado?", respuesta1: "La elocuencia", respuesta2: "La habilidad artística", respuesta3: "La belleza", correcta: 1},
-	{pregunta: "¿Qué es el \"triclinium\"?", respuesta1: "Un arma arrojadiza", respuesta2: "Un carro de tres ruedas", respuesta3: "Un sofá para comer", correcta: 3},
-	{pregunta: "¿Cuál de estas atracciones no pertenece a la civilización de Roma?", respuesta1: "Magnus Colossus", respuesta2: "El vuelo del Feníx", respuesta3: "Arietes", correcta: 3},
-	{pregunta: "¿Qué son las bacanales?", respuesta1: "Periodo vacacional en la Roma antigua", respuesta2: "Tribu de mujeres de los Montes Balcanes", respuesta3: "Fiestas en honor del dios Baco", correcta: 3},
-	{pregunta: "Película famosa de los años 60, donde se narran las peripecias de un gladiador:", respuesta1: "Gladiator", respuesta2: "Espartaco", respuesta3: "Viriato", correcta: 2},
-	{pregunta: "¿Qué es una sibila?", respuesta1: "Una esclava", respuesta2: "Una adivina", respuesta3: "Un tipo de flauta", correcta: 2},
-	{pregunta: "Con la cara muy pintada hago reír a la chiquillada", respuesta1: "El faraón", respuesta2: "El payaso", respuesta3: "Barbarroja", correcta: 2}, // Posible grupo común
-	{pregunta: "Es un sabio gordinflón que si le preguntan no habla. ¿Qué es?", respuesta1: "El diccionario", respuesta2: "El oráculo", respuesta3: "El conocimiento", correcta: 1}, // Posible grupo común
-	//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
-// Grecia
-	{pregunta: "En los Juegos Olímpicos al ganador se le coronaba con hojas de...", respuesta1: "laurel", respuesta2: "hinojo", respuesta3: "olivo", correcta: 3},
-	{pregunta: "Durante la celebración de los Juegos, los griegos...", respuesta1: "continuaban combatiendo en sus guerras", respuesta2: "pactaban una tregua", respuesta3: "incrementaban los combates", correcta: 2},
-	{pregunta: "¿De qué color son las mangas del chaleco rojo del Minotauro?", respuesta1: "Rojas", respuesta2: "No tiene mangas", respuesta3: "Gris marengo", correcta: 2},
-	{pregunta: "Los púgiles griegos luchaban...", respuesta1: "con los puños desnudos", respuesta2: "atándose en la mano una tira de cuero", respuesta3: "con guantes", correcta: 2},
-	{pregunta: "¿Qué pueblo, enemigo de los griegos, fue derrotado por el hijo de Filipo en el siglo IV a.C.?", respuesta1: "Los persas", respuesta2: "Los egipcios", respuesta3: "Los aztecas", correcta: 1},
-	{pregunta: "Asclepio era, según la mitología griega, dios de...", respuesta1: "la guerra", respuesta2: "la medicina", respuesta3: "el mar", correcta: 2},
-	{pregunta: "¿Quién reconstruyó la Acrópolis de Atenas?", respuesta1: "Agamenón", respuesta2: "Pericles", respuesta3: "Alejandro Magno", correcta: 2},
-	{pregunta: "En el entrenamiento de los guerreros espartanos se incluía...", respuesta1: "el canto", respuesta2: "la danza", respuesta3: "el teatro", correcta: 2},
-	{pregunta: "Los atletas griegos corrían desnudos...", respuesta1: "por el calor", respuesta2: "por no tener ropa", respuesta3: "para pesar menos", correcta: 3},
-	{pregunta: "¿Qué eran las amazonas?", respuesta1: "Sacerdotisas del templo", respuesta2: "Habitantes del amazonas", respuesta3: "Mujeres guerreras", correcta: 3},
-	{pregunta: "¿A quién emulas en la atracción del Laberinto del Minotauro?", respuesta1: "A Teseo", respuesta2: "A Telémaco", respuesta3: "Al minotauro", correcta: 1},
-	{pregunta: "¿Qué es la aristocracia?", respuesta1: "Gobierno de los nobles", respuesta2: "Gobierno del pueblo", respuesta3: "Gobierno de los sacerdotes", correcta: 1},
-	{pregunta: "¿Qué significa oligarquía?", respuesta1: "Gobierno de los aceiteros", respuesta2: "Gobierno de unos pocos", respuesta3: "Gobierno de los esclavos", correcta: 2},
-	{pregunta: "El declive griego comenzó a partir de la muerte de...", respuesta1: "Pericles", respuesta2: "Alejandro Magno", respuesta3: "Agamenón", correcta: 2},
-	{pregunta: "Si caes en la casilla de La Furia de Tritón, ¿dónde aparecerás?", respuesta1: "En la casilla de El Moll", respuesta2: "En la casilla de El tren Bravo", respuesta3: "En la casilla de Los Rápidos de Argos", correcta: 3},
-	{pregunta: "¿Quiénes eran Esquilo, Sófocles y Eurípides?", respuesta1: "Un trío musical", respuesta2: "Gobernantes de un triunvirato", respuesta3: "Autores de tragedias griegas", correcta: 3},
-	{pregunta: "Bramido a bramido, antes de las tormentas todos lo hemos oído.", respuesta1: "El relámpago", respuesta2: "El trueno", respuesta3: "El cuervo", correcta: 2}, // Posible grupo común
-	{pregunta: "El que la tenga que la atienda y si no es mejor que la venda.", respuesta1: "Las sandalias", respuesta2: "La tienda", respuesta3: "La mascota", correcta: 2}, // Posible grupo común
-	{pregunta: "Sin ser rica tengo cuartos y a pesar de que no como, a veces estoy llena", respuesta1: "El monedero", respuesta2: "La luna", respuesta3: "La estrella", correcta: 2}, // Posible grupo común
-	{pregunta: "De día llenos de carne, de noche con la boca al aire", respuesta1: "Las lentejas", respuesta2: "El canelón", respuesta3: "Los zapatos", correcta: 3}, // Posible grupo común
-	{pregunta: "Tengo agujas y no sé coser, tengo números y no sé leer. ¿Quién soy?", respuesta1: "El erizo", respuesta2: "La luna", respuesta3: "El reloj", correcta: 3}, // La 3a opción originalmente era "El reloj de arena" // Posible grupo común
-	{pregunta: "Del cielo viene, a unos disgusta y a otros mantiene.", respuesta1: "Las nubes", respuesta2: "La lluvia", respuesta3: "La nieve", correcta: 2}, // Posible grupo común
-	//{pregunta: "¿Dónde puedes encontrarte con el ballet Terra Mítica?", respuesta1: "En Egipto", respuesta2: "En Grecia", respuesta3: "En Roma", correcta: 0}, // No es la 3. Posiblemente la 2. Desconocida/desfasada // Posible grupo común 
-	//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
-// SET PERSONALIZADO
-	//{pregunta: "¿Cuál de las siguientes atracciones desapareció antes de Terra Mítica?", respuesta1: "Los Secretos de los Dioses", respuesta2: "El Misterio de Keops", respuesta3: "El Rescate de Ulises", correcta: 1},
-	//{pregunta: "¿Cómo se llamaba la actual Titánide cuando estaba en la zona de Iberia?", respuesta1: "Titánide (igual)", respuesta2: "Tizona", respuesta3: "Colada", correcta: 2},
-	//{pregunta: "¿Bajo qué monumento egipcio se accede a Terra Mítica?", respuesta1: "La Pirámide de Keops", respuesta2: "El Faro de Alejandría", respuesta3: "La Puerta de Karnak", correcta: 3},
-	//{pregunta: "¿En qué zona de Terra Mítica se encuentra el área de piscinas?", respuesta1: "Roma", respuesta2: "Iberia", respuesta3: "Las Islas", correcta: 2},
-	//{pregunta: "¿Cómo se llama el espectáculo más longevo del parque?", respuesta1: "Barbarroja", respuesta2: "Arde Troya", respuesta3: "El Torneo", correcta: 3},
-	//{pregunta: "¿En las colas de qué antigua atracción se desarrolla Arde Troya?", respuesta1: "El Rescate de Ulises", respuesta2: "Magnus Colossus", respuesta3: "Los Secretos de los Dioses", correcta: 1},
-];
+let lista_preguntas = {
+	test: [
+		{pregunta: "Pregunta de prueba 1", respuesta1: "Respuesta A (correcta)", respuesta2: "Respuesta B", respuesta3: "Respuesta C", correcta: 1},
+		{pregunta: "Pregunta de prueba 2", respuesta1: "Respuesta A", respuesta2: "Respuesta B (correcta)", respuesta3: "Respuesta C", correcta: 2},
+		{pregunta: "Pregunta de prueba 3", respuesta1: "Respuesta A", respuesta2: "Respuesta B", respuesta3: "Respuesta C (correcta)", correcta: 3},
+	],
+	comun: [
+		{pregunta: "¿Qué es lo que se compra para comer y no se come?", respuesta1: "La sopa", respuesta2: "La cuchara", respuesta3: "La bebida", correcta: 2}, // Encontrada en Egipto
+		{pregunta: "¿Dónde puedes ver una estatua de la Dama de Elche?", respuesta1: "En Iberia", respuesta2: "En Roma", respuesta3: "En Egipto", correcta: 1}, // Encontrada en Egipto
+		{pregunta: "¿Cuántas puntas tiene la rosa de los vientos de Terra Mítica?", respuesta1: "6", respuesta2: "8", respuesta3: "233", correcta: 2}, // Encontrada en Egipto
+		{pregunta: "Con madera de pino, de haya o de nogal construyo los muebles para tu hogar.", respuesta1: "El arquitecto", respuesta2: "El albañil", respuesta3: "El carpintero", correcta: 3}, // Encontrada en Egipto
+		{pregunta: "Bramido a bramido, antes de las tormentas todos lo hemos oído.", respuesta1: "El relámpago", respuesta2: "El trueno", respuesta3: "El cuervo", correcta: 2}, // Encontrada en Grecia
+		{pregunta: "El que la tenga que la atienda y si no es mejor que la venda.", respuesta1: "Las sandalias", respuesta2: "La tienda", respuesta3: "La mascota", correcta: 2}, // Encontrada en Grecia
+		{pregunta: "Sin ser rica tengo cuartos y a pesar de que no como, a veces estoy llena", respuesta1: "El monedero", respuesta2: "La luna", respuesta3: "La estrella", correcta: 2}, // Encontrada en Grecia
+		{pregunta: "De día llenos de carne, de noche con la boca al aire", respuesta1: "Las lentejas", respuesta2: "El canelón", respuesta3: "Los zapatos", correcta: 3}, // Encontrada en Grecia
+		{pregunta: "Tengo agujas y no sé coser, tengo números y no sé leer. ¿Quién soy?", respuesta1: "El erizo", respuesta2: "La luna", respuesta3: "El reloj", correcta: 3}, // La 3a opción originalmente era "El reloj de arena" // Encontrada en Grecia
+		{pregunta: "Del cielo viene, a unos disgusta y a otros mantiene.", respuesta1: "Las nubes", respuesta2: "La lluvia", respuesta3: "La nieve", correcta: 2}, // Encontrada en Grecia
+		{pregunta: "Con la cara muy pintada hago reír a la chiquillada", respuesta1: "El faraón", respuesta2: "El payaso", respuesta3: "Barbarroja", correcta: 2}, // Encontrada en Roma
+		{pregunta: "Es un sabio gordinflón que si le preguntan no habla. ¿Qué es?", respuesta1: "El diccionario", respuesta2: "El oráculo", respuesta3: "El conocimiento", correcta: 1}, // Encontrada en Roma
+		{pregunta: "¿En qué civilización se encuentra Arriarix?", respuesta1: "Grecia", respuesta2: "Iberia", respuesta3: "Roma", correcta: 1}, // Encontrada en Iberia
+		//{pregunta: "¿Dónde puedes encontrarte con el ballet Terra Mítica?", respuesta1: "En Egipto", respuesta2: "En Grecia", respuesta3: "En Roma", correcta: 0}, // No es la 3. Posiblemente la 2. Desconocida/desfasada
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	Egipto: [
+		{pregunta: "La moda de las túnicas con pliegues en Egipto...", respuesta1: "fue pasajera", respuesta2: "duró 1500 años", respuesta3: "se impuso copiada a los romanos", correcta: 1},
+		{pregunta: "Las flechas de los ejércitos más antiguos de Egipto tenían las puntas de...", respuesta1: "bronce", respuesta2: "sílex", respuesta3: "madera", correcta: 2},
+		{pregunta: "Al morir, los egipcios eran...", respuesta1: "quemados", respuesta2: "embalsamados", respuesta3: "arrojados al río", correcta: 2},
+		{pregunta: "¿Qué importante innovación, procedente de Oriente Medio, introdujeron los egipcios en su ejército?", respuesta1: "Los elefantes", respuesta2: "Las catapultas", respuesta3: "El carro de combate", correcta: 3},
+		{pregunta: "Alejandría fue fundada por...", respuesta1: "Julio César", respuesta2: "Cleopatra", respuesta3: "Alejandro Magno", correcta: 3},
+		{pregunta: "¿De qué material eran las faldillas corrientes que llevaban los egipcios?", respuesta1: "Lino", respuesta2: "Algodón", respuesta3: "Papiro", correcta: 1},
+		{pregunta: "Las pirámides mejor conservadas son...", respuesta1: "las más antiguas", respuesta2: "las más modernas", respuesta3: "las más pequeñas", correcta: 1},
+		{pregunta: "Según el Libro de los Muertos, ¿qué parte del cuerpo pesaba el dios Annubis para saber si el difunto podía entrar en el paraíso?", respuesta1: "El corazón", respuesta2: "El cerebro", respuesta3: "Los pulmones", correcta: 1},
+		{pregunta: "¿Qué insecto era venerado por los egipcios?", respuesta1: "El saltamontes", respuesta2: "La mariquita", respuesta3: "El escarabajo", correcta: 3},
+		{pregunta: "¿Por qué los ladrillos cocidos, más resistentes y fáciles de decorar, escasean en el antiguo Egipto?", respuesta1: "Porque se los llevaban los saqueadores de tumbas", respuesta2: "Porque eran considerados sagrados", respuesta3: "Porque escaseaba la madera para los hornos", correcta: 3},
+		{pregunta: "¿Cuál de estos edificios es el de menor altura?", respuesta1: "La estatua de la Libertad", respuesta2: "La pirámide de Keops", respuesta3: "La torre Eiffel", correcta: 1},
+		{pregunta: "¿De qué animal se han encontrado más momias?", respuesta1: "Perro", respuesta2: "Cocodrilo", respuesta3: "Gato", correcta: 3},
+		{pregunta: "Si caes en la casilla de El Puerto de Alejandría, ¿dónde aparecerás?", respuesta1: "En la casilla de La Furia de Tritón", respuesta2: "En la casilla de El Moll", respuesta3: "En la casilla de El Vuelo del Fénix", correcta: 2},
+		{pregunta: "¿Qué dos alimentos eran básicos en la dieta de un egipcio?", respuesta1: "La patata y la cebolla", respuesta2: "La lechuga y el tomate", respuesta3: "El pan y la cerveza", correcta: 3},
+		{pregunta: "¿Quiénes tienen un romántico encuentro en Egipto?", respuesta1: "Marco Antonio y Cleopatra", respuesta2: "Las arañas y las arpías", respuesta3: "Cleopatra y Ulises", correcta: 1},
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	Grecia: [
+		{pregunta: "En los Juegos Olímpicos al ganador se le coronaba con hojas de...", respuesta1: "laurel", respuesta2: "hinojo", respuesta3: "olivo", correcta: 3},
+		{pregunta: "Durante la celebración de los Juegos, los griegos...", respuesta1: "continuaban combatiendo en sus guerras", respuesta2: "pactaban una tregua", respuesta3: "incrementaban los combates", correcta: 2},
+		{pregunta: "¿De qué color son las mangas del chaleco rojo del Minotauro?", respuesta1: "Rojas", respuesta2: "No tiene mangas", respuesta3: "Gris marengo", correcta: 2},
+		{pregunta: "Los púgiles griegos luchaban...", respuesta1: "con los puños desnudos", respuesta2: "atándose en la mano una tira de cuero", respuesta3: "con guantes", correcta: 2},
+		{pregunta: "¿Qué pueblo, enemigo de los griegos, fue derrotado por el hijo de Filipo en el siglo IV a.C.?", respuesta1: "Los persas", respuesta2: "Los egipcios", respuesta3: "Los aztecas", correcta: 1},
+		{pregunta: "Asclepio era, según la mitología griega, dios de...", respuesta1: "la guerra", respuesta2: "la medicina", respuesta3: "el mar", correcta: 2},
+		{pregunta: "¿Quién reconstruyó la Acrópolis de Atenas?", respuesta1: "Agamenón", respuesta2: "Pericles", respuesta3: "Alejandro Magno", correcta: 2},
+		{pregunta: "En el entrenamiento de los guerreros espartanos se incluía...", respuesta1: "el canto", respuesta2: "la danza", respuesta3: "el teatro", correcta: 2},
+		{pregunta: "Los atletas griegos corrían desnudos...", respuesta1: "por el calor", respuesta2: "por no tener ropa", respuesta3: "para pesar menos", correcta: 3},
+		{pregunta: "¿Qué eran las amazonas?", respuesta1: "Sacerdotisas del templo", respuesta2: "Habitantes del amazonas", respuesta3: "Mujeres guerreras", correcta: 3},
+		{pregunta: "¿A quién emulas en la atracción del Laberinto del Minotauro?", respuesta1: "A Teseo", respuesta2: "A Telémaco", respuesta3: "Al minotauro", correcta: 1},
+		{pregunta: "¿Qué es la aristocracia?", respuesta1: "Gobierno de los nobles", respuesta2: "Gobierno del pueblo", respuesta3: "Gobierno de los sacerdotes", correcta: 1},
+		{pregunta: "¿Qué significa oligarquía?", respuesta1: "Gobierno de los aceiteros", respuesta2: "Gobierno de unos pocos", respuesta3: "Gobierno de los esclavos", correcta: 2},
+		{pregunta: "El declive griego comenzó a partir de la muerte de...", respuesta1: "Pericles", respuesta2: "Alejandro Magno", respuesta3: "Agamenón", correcta: 2},
+		{pregunta: "Si caes en la casilla de La Furia de Tritón, ¿dónde aparecerás?", respuesta1: "En la casilla de El Moll", respuesta2: "En la casilla de El tren Bravo", respuesta3: "En la casilla de Los Rápidos de Argos", correcta: 3},
+		{pregunta: "¿Quiénes eran Esquilo, Sófocles y Eurípides?", respuesta1: "Un trío musical", respuesta2: "Gobernantes de un triunvirato", respuesta3: "Autores de tragedias griegas", correcta: 3},
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	Roma: [
+		{pregunta: "¿Cuál era el lugar favorito de ocio para los romanos donde, además, practicaban deportes y tomaban baños?", respuesta1: "El estadio", respuesta2: "El anfiteatro", respuesta3: "Las termas", correcta: 3},
+		{pregunta: "De Roma se decía que para dormir hacía falta mucho dinero porque...", respuesta1: "el precio de las camas era muy elevado", respuesta2: "se pagaba un impuesto por esta actividad", respuesta3: "sólo una gran casa podía aislarse del ruido", correcta: 3},
+		{pregunta: "Una mujer rica romana...", respuesta1: "nunca se arreglaba para salir", respuesta2: "sólo se pintaba los ojos", respuesta3: "necesitaba 3 horas y 4 esclavas para acicalarse", correcta: 3},
+		{pregunta: "¿Qué método utilizaban los ricos y los gobernantes para desplazarse rápidamente entre la multitud que atiborraba las calles de Roma?", respuesta1: "Carros tirados por cuatro caballos", respuesta2: "Corrían a pie entre la multitud", respuesta3: "Literas llevadas por cuatro esclavos", correcta: 1},
+		{pregunta: "¿Cómo se llamaba el hijo de Julio César y Cleopatra?", respuesta1: "Cesáreo", respuesta2: "Cesarión", respuesta3: "Cleopatro", correcta: 2},
+		{pregunta: "Además de ser de familia rica, ¿qué cualidad debía tener un romano para ser admitido en el senado?", respuesta1: "La elocuencia", respuesta2: "La habilidad artística", respuesta3: "La belleza", correcta: 1},
+		{pregunta: "¿Qué es el \"triclinium\"?", respuesta1: "Un arma arrojadiza", respuesta2: "Un carro de tres ruedas", respuesta3: "Un sofá para comer", correcta: 3},
+		{pregunta: "¿Cuál de estas atracciones no pertenece a la civilización de Roma?", respuesta1: "Magnus Colossus", respuesta2: "El vuelo del Feníx", respuesta3: "Arietes", correcta: 3},
+		{pregunta: "¿Qué son las bacanales?", respuesta1: "Periodo vacacional en la Roma antigua", respuesta2: "Tribu de mujeres de los Montes Balcanes", respuesta3: "Fiestas en honor del dios Baco", correcta: 3},
+		{pregunta: "Película famosa de los años 60, donde se narran las peripecias de un gladiador:", respuesta1: "Gladiator", respuesta2: "Espartaco", respuesta3: "Viriato", correcta: 2},
+		{pregunta: "¿Qué es una sibila?", respuesta1: "Una esclava", respuesta2: "Una adivina", respuesta3: "Un tipo de flauta", correcta: 2},
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	Lasislas: [
+		{pregunta: "Los cretenses pescaban el pulpo en las rocas de la costa con...", respuesta1: "arpones", respuesta2: "cañas de pescar", respuesta3: "con la mano", correcta: 1},
+		{pregunta: "¿Cómo se llamaba la esposa del rey griego raptada por Paris, príncipe de Troya?", respuesta1: "Irene", respuesta2: "Sofía", respuesta3: "Helena", correcta: 3}, // También encontrada en Egipto
+		{pregunta: "En la guerra de troya venció el ejército...", respuesta1: "troyano", respuesta2: "griego", respuesta3: "persa", correcta: 2},
+		{pregunta: "En el siglo XIV a.C. la influencia micénica se difundió por todo el mar...", respuesta1: "Mediterráneo", respuesta2: "Egeo", respuesta3: "Jónico", correcta: 2},
+		{pregunta: "El legendario rey Minos mandó construir el palacio de...", respuesta1: "Cnosos", respuesta2: "Versalles", respuesta3: "Esmirna", correcta: 1},
+		{pregunta: "La cultura cretense se extendió por islas que en la actualidad pertenecen a Grecia y a...", respuesta1: "Francia", respuesta2: "Italia", respuesta3: "Turquía", correcta: 3},
+		{pregunta: "¿Qué relación existe entre el nombre de Arthur Evans y Creta?", respuesta1: "Fue el arqueólogo que excavó en Cnosos", respuesta2: "Escribió una novela sobre el Minotauro", respuesta3: "Montó una secta de adoradores del toro", correcta: 1},
+		{pregunta: "Si viajaras en la actualidad a las ruinas de Troya, te harías entender en...", respuesta1: "turco", respuesta2: "griego", respuesta3: "italiano", correcta: 1},
+		{pregunta: "La civilización minoica se desarrolló en la isla de...", respuesta1: "Chipre", respuesta2: "Creta", respuesta3: "Malta", correcta: 2},
+		{pregunta: "¿En qué se basaba la economía de Troya?", respuesta1: "Espectáculos y pasatiempos", respuesta2: "Agricultura, comercio y artesanía", respuesta3: "Minería y piratería", correcta: 2},
+		{pregunta: "En la lidia, a los cuernos del toro se les denomina...", respuesta1: "cuernos", respuesta2: "cuernas", respuesta3: "pitones", correcta: 3},
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	Iberia: [
+		{pregunta: "Raza de perro de gran tamaño, los machos pesan alrededor de 75 kg., introducida en España por los fenicios", respuesta1: "Setter irlandés", respuesta2: "Mastín español", respuesta3: "San Bernardo", correcta: 2},
+		{pregunta: "Si caes en la casilla de El Moll, ¿dónde apareces?", respuesta1: "En la casilla de El Puerto de Alejandría", respuesta2: "En la casilla de La Furia de Tritón", respuesta3: "En la casilla de Akuatiti", correcta: 1},
+		{pregunta: "Tierra llana y fértil generalmente regada por un río.", respuesta1: "Páramo", respuesta2: "Llaneza", respuesta3: "Vega", correcta: 3},
+		{pregunta: "Las fachadas de las casas de los pueblos solían estar pintadas por fuera de blanco porque...", respuesta1: "es un color muy económico", respuesta2: "es agradable a la vista", respuesta3: "absorbe menos el calor del Sol", correcta: 3},
+		{pregunta: "Las tejas de barro cocido y forma curva se conocen como...", respuesta1: "tejas francesas", respuesta2: "tejas morunas", respuesta3: "tejas inglesas", correcta: 2},
+		{pregunta: "En la Península Ibérica la cría de abejas para obtener miel se viene practicando desde milenios. ¿Cómo se llama la persona que realiza esta actividad?", respuesta1: "Mielero", respuesta2: "Apicultor", respuesta3: "Abejaruco", correcta: 2}, // Extraída del gameplay de YouTube (https://www.youtube.com/watch?v=z8hrsnvA1Ms)
+		{pregunta: "¿Cuál de estas 3 penínsulas no está situada en el Mediterráneo?", respuesta1: "Balcánica", respuesta2: "Itálica", respuesta3: "Escandinava", correcta: 3}, // Extraída del gameplay de YouTube (https://www.youtube.com/watch?v=z8hrsnvA1Ms)
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+	personalizadas: [
+		{pregunta: "¿Cuál de las siguientes atracciones desapareció antes de Terra Mítica?", respuesta1: "Los Secretos de los Dioses", respuesta2: "El Misterio de Keops", respuesta3: "El Rescate de Ulises", correcta: 1},
+		{pregunta: "¿Cómo se llamaba la actual Titánide cuando estaba en la zona de Iberia?", respuesta1: "Titánide (igual)", respuesta2: "Tizona", respuesta3: "Colada", correcta: 2},
+		{pregunta: "¿Bajo qué monumento egipcio se accede a Terra Mítica?", respuesta1: "La Pirámide de Keops", respuesta2: "El Faro de Alejandría", respuesta3: "La Puerta de Karnak", correcta: 3},
+		{pregunta: "¿En qué zona de Terra Mítica se encuentra el área de piscinas?", respuesta1: "Roma", respuesta2: "Iberia", respuesta3: "Las Islas", correcta: 2},
+		{pregunta: "¿Cómo se llama el espectáculo más longevo del parque?", respuesta1: "Barbarroja", respuesta2: "Arde Troya", respuesta3: "El Torneo", correcta: 3},
+		{pregunta: "¿En las colas de qué antigua atracción se desarrolla Arde Troya?", respuesta1: "El Rescate de Ulises", respuesta2: "Magnus Colossus", respuesta3: "Los Secretos de los Dioses", correcta: 1},
+		//{pregunta: "", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
+	],
+};
 
 let start = {}
 start.window = document.querySelector("#start");
@@ -217,6 +263,7 @@ game.loadScene = function (swf) {
 		case "Recuperar":
 			bkg = "f0";
 			music = "m0";
+			break;
 		default:
 			console.error("Solicitada carga de escena desconocida");
 			return;
@@ -240,16 +287,15 @@ game.load = function (bkg, swf) {
 	game.nueva.stop();
 	game.codigo.classList.add("hidden");
 	game.flash.classList.remove("hidden");
-	if (bkg == "f0" || bkg == "f1") {
-		game.flash.classList.add("big");
-	} else {
-		game.flash.classList.remove("big");
-	}
+	game.flash.setAttribute("data-size",bkg);
+	game.video.window.setAttribute("data-size",bkg);
+	let backgroundColor = null;
 	switch (bkg) {
 		case "f21":
 		case "f22":
 		case "f23":
 			game.ui.load(swf);
+			backgroundColor = "#416787";
 			break;
 		case "f1":
 			game.nueva.load();
@@ -260,6 +306,7 @@ game.load = function (bkg, swf) {
 				game.codigo.classList.remove("hidden");
 				game.codigo.querySelector("#secreto").innerText = game_status.sCode;
 			}
+			backgroundColor = "#ca9569";
 			break;
 	}
 
@@ -277,7 +324,7 @@ game.load = function (bkg, swf) {
 			if (typeof game_status.onTableroLoad !== 'undefined' && game_status.onTableroLoad != null) game_status.onTableroLoad();
 			game_status.onTableroLoad = null;
 		} else {
-			load_ruffle(swf != null ? "data/" + swf + ".swf" : null, game_status);
+			load_ruffle(swf != null ? "data/" + swf + ".swf" : null, game_status,backgroundColor);
 		}
 	}
 }
@@ -333,6 +380,12 @@ game.nueva.form.comenzar = function () {
 		crearPersonaje(6,"Minotauro",4);
 	}
 	game_status.jugador = -1;
+	game_status.result = 0;
+	game_status.ended = false;
+	game_status.rondas = 0;
+	game_status.casillasActivadas = [];
+	game_status.onTableroLoad = null;
+	game_status.lista_preguntas = JSON.parse(JSON.stringify(lista_preguntas)); // Duplicar lista para poder editarla sin cambiar la original
 	loadNextPlayer();
 }
 game.nueva.load = function () {
@@ -359,7 +412,6 @@ game.ui.medallon.Egipto = game.ui.medallon.base.querySelector(".egipto");
 game.ui.minoRnd = game.ui.window.querySelector(".minoRnd");
 game.ui.minoRndTxt = game.ui.window.querySelector(".minoRndTxt");
 game.ui.volumen = game.ui.window.querySelector(".volumen");
-game.ui.volumen.classList.add("hidden");
 game.ui.vida = game.ui.window.querySelector(".vida");
 game.ui.fenix = game.ui.window.querySelector(".fenix");
 game.ui.zoom = game.ui.window.querySelector(".zoom");
@@ -479,7 +531,11 @@ start.notes.links.forEach( (elem) => {
 function finIntro () {
 	if (intro.video.currentTime < 1) return; // Arregla "salir.webm", que salta inmediatamente por algún motivo
 	if (intro.video.src.endsWith("intro.webm")) {
-		game.loadScene("MenuPrincipal");
+		if (localStorage.getItem("laberyntia_autoguardado") != null && JSON.parse(localStorage.getItem("laberyntia_autoguardado")).ended == false) {
+			game.loadScene("Recuperar");
+		} else {
+			game.loadScene("MenuPrincipal");
+		}
 	} else if (intro.video.src.endsWith("fganar.webm")) {
 		game.loadScene("Codigo");
 	} else if (intro.video.src.endsWith("salir.webm") || intro.video.src.endsWith("adeu.webm")) {
@@ -537,23 +593,24 @@ game.video.player.addEventListener("ended", () => {
 });
 
 let ruffle_player = null;
-function load_ruffle (url, flashvars) {
-	/*if (ruffle_player != null) {
-		ruffle_player.remove();
+function load_ruffle (url, flashvars, forceBackgroundColor) {
+	if (ruffle_player != null) {
+		ruffle_player.ruffle().volume = 0.0;
+		let ruffle_player_to_remove = ruffle_player;
+		setTimeout( () => {
+			ruffle_player_to_remove.remove();
+			load_ruffle(url,flashvars,forceBackgroundColor);
+		});
 		ruffle_player = null;
-		setTimeout(load_ruffle(url,flashvars),500);
 		return;
-	}*/
+	}
 
 	if (url == null) {
 		return;
 	}
-
-	if (ruffle_player) {
-		// TODO comprobar cómo limpiar correctamente la instancia que se cierra al cargar películas nuevas
-		ruffle_player.remove();
-	}
-
+	
+	revokeCapturedEvents();
+	startCapturingEvents();
 	let ruffle = window.RufflePlayer.newest();
 	ruffle_player = ruffle.createPlayer();
 	ruffle_player.config = {
@@ -564,6 +621,7 @@ function load_ruffle (url, flashvars) {
 		"unmuteOverlay": "hidden",
 		"splashScreen": false,
 		"playerRuntime": "flashPlayer",
+		"backgroundColor": forceBackgroundColor ? forceBackgroundColor : null,
 		"logLevel": DEBUG ? "info" : "error",
 	};
 	document.getElementById("flash").innerHTML = "";
@@ -607,15 +665,33 @@ function initTablero () {
 	}
 }
 
-function preguntas (id_pregunta) {
-	if (typeof id_pregunta === 'undefined' || id_pregunta < 0 || id_pregunta >= lista_preguntas.length) {
-		id_pregunta = Math.floor(Math.random() * lista_preguntas.length);
+function preguntas (categoria, id_pregunta, consumir) {
+	if (typeof categoria === 'undefined' || categoria == null) {
+		let categorias = Object.keys(game_status.lista_preguntas);
+		categoria = categorias[Math.floor(Math.random() * categorias.length)];
 	}
-	game_status.pregunta   = lista_preguntas[id_pregunta].pregunta;
-	game_status.respuesta1 = lista_preguntas[id_pregunta].respuesta1;
-	game_status.respuesta2 = lista_preguntas[id_pregunta].respuesta2;
-	game_status.respuesta3 = lista_preguntas[id_pregunta].respuesta3;
-	game_status.correcta   = lista_preguntas[id_pregunta].correcta;
+	if (game_status.lista_preguntas[categoria] == null || game_status.lista_preguntas[categoria].length == 0) {
+		loadNextPlayer();
+		return;
+	}
+	if (typeof id_pregunta === 'undefined' || id_pregunta == null || id_pregunta < 0 || id_pregunta >= game_status.lista_preguntas[categoria].length) {
+		let preguntasPorHacer = game_status.lista_preguntas[categoria].map( (pregunta,idx) => {pregunta.id_original = idx; return pregunta;} ).filter( (pregunta) => !pregunta.hecha );
+		if (preguntasPorHacer.length == 0) {
+			loadNextPlayer();
+			return;
+		}
+		id_pregunta = preguntasPorHacer[Math.floor(Math.random() * preguntasPorHacer.length)].id_original;
+	}
+	game_status.pregunta   = game_status.lista_preguntas[categoria][id_pregunta].pregunta;
+	game_status.respuesta1 = game_status.lista_preguntas[categoria][id_pregunta].respuesta1;
+	game_status.respuesta2 = game_status.lista_preguntas[categoria][id_pregunta].respuesta2;
+	game_status.respuesta3 = game_status.lista_preguntas[categoria][id_pregunta].respuesta3;
+	game_status.correcta   = game_status.lista_preguntas[categoria][id_pregunta].correcta;
+
+	if (typeof consumir === 'undefined' || consumir) {
+		game_status.lista_preguntas[categoria][id_pregunta].hecha = true;
+	}
+	
 	game.loadScene("preguntas");
 }
 
@@ -671,13 +747,14 @@ function loadNextPlayer () {
 		if (game_status.jugador == 6) break; // Minotauro
 	}
 	if (game_status.jugador == 7) {
+		game_status.rondas++;
 		game_status.jugador = 0;
 	}
 	while (game_status.jugador < 6 && (game_status.personajes[game_status.jugador] == null || game_status.personajes[game_status.jugador].proxima == "saltar")) {
 		if (game_status.personajes[game_status.jugador] != null && game_status.personajes[game_status.jugador].proxima == "saltar") game_status.personajes[game_status.jugador].proxima = "";
 		game_status.jugador++;
 	}
-	if (game_status.jugador == 0) game_status.rondas++;
+	localStorage.setItem("laberyntia_autoguardado",JSON.stringify(game_status));
 	loadPlayer();
 }
 function loadPlayer () {
@@ -778,6 +855,8 @@ function minopilla (jugador) {
 	if (medallon.Roma && medallon.Grecia && medallon.Lasislas && medallon.Iberia && medallon.Egipto) {
 		// PRUEBA Final
 		game_status.reto_actual = "Final";
+		game_status.turnoEnRetoFinal = jugador;
+		game_status.jugador = jugador;
 		if (game_status.personajes[jugador].vida > 0)
 			game.loadScene("_reto");
 		else
@@ -803,7 +882,17 @@ function jugarCasilla (num) {
 	// comprobar minopilla (quitar trozo medallón random y saltar a siguiente jugador)
 	if (game_status.personajes[6] && game_status.personajes[6].casilla != 0 &&
 		game_status.personajes[game_status.jugador].casilla == game_status.personajes[6].casilla) {
+		if (game_status.personajes[game_status.jugador].proxima == "doble") {
+			game_status.personajes[game_status.jugador].proxima = "";
+		}
 		minopilla(game_status.jugador);
+		return;
+	}
+
+	if (game_status.personajes[game_status.jugador].proxima == "doble") {
+		game_status.personajes[game_status.jugador].proxima = "";
+		calcularCasillasActivadas();
+		initTablero();
 		return;
 	}
 
@@ -833,10 +922,12 @@ function jugarCasilla (num) {
 		case 45:
 		case 48:
 		case 50:
-			// Todas RANDOM {Preguntas 20%, nada 80%} ???
-			let hacerPregunta = Math.random() >= 0.80;
-			if (hacerPregunta) {
-				action = function () {preguntas();}
+			// Todas RANDOM {Preguntas específicas 20%, preguntas generales 5%, nada 75%}
+			let preguntaRandom = Math.random();
+			if (preguntaRandom >= 0.80) {
+				action = function () {preguntas(calcularLugar(game_status.personajes[game_status.jugador].casilla).replace(/\s+/,""));}
+			} else if (preguntaRandom >= 0.75) {
+				action = function () {preguntas("comun");}
 			}
 			break;
 		case 3:
@@ -997,8 +1088,10 @@ function fsCommand (cmd, args) {
 					break;
 				case "Salvar":
 					localStorage.setItem("laberyntia_partida",JSON.stringify(game_status));
+					localStorage.removeItem("laberyntia_autoguardado");
 					break;
 				case "Fin":
+					localStorage.removeItem("laberyntia_autoguardado");
 					game.loadScene("MenuPrincipal");
 					break;
 			}
@@ -1009,7 +1102,9 @@ function fsCommand (cmd, args) {
 		case "c":
 			if (!args) break;
 			if (isNaN(parseFloat(args)) || isNaN(args - 0)) break;
-			game_status.result = 0;
+			if (game_status.personajes[game_status.jugador].proxima != "doble") {
+				game_status.result = 0;
+			}
 			activarCasilla(args);
 			game_status.casillasActivadas = [];
 			callExternalInterface("desactivarCasillas");
@@ -1020,10 +1115,6 @@ function fsCommand (cmd, args) {
 			break;
 		case "dado":
 			game_status.result = args;
-			if (game_status.personajes[game_status.jugador].proxima == "doble") {
-				game_status.personajes[game_status.jugador].proxima = "";
-				game_status.result = game_status.result * 2;
-			}
 			if (game_status.personajes[game_status.jugador].proxima == "impar") {
 				if (game_status.result % 2 == 0) {
 					loadNextPlayer();
@@ -1033,6 +1124,7 @@ function fsCommand (cmd, args) {
 				}
 			}
 			calcularCasillasActivadas();
+			localStorage.setItem("laberyntia_autoguardado",JSON.stringify(game_status));
 			game.loadScene("tablero");
 			break;
 		case "Pregunta":
@@ -1100,6 +1192,7 @@ function fsCommand (cmd, args) {
 						game_status.ended = true;
 						game_status.sCode = "948708939551";
 						localStorage.setItem("laberyntia_codigo",game_status.sCode);
+						localStorage.removeItem("laberyntia_autoguardado");
 						intro.load(videoG);
 					} else {
 						game_status.personajes[game_status.jugador].medallon[game_status.reto_actual] = true;
@@ -1114,12 +1207,27 @@ function fsCommand (cmd, args) {
 				case "Perder":
 					let videoP = retos[game_status.reto_actual].perder;
 					videoP = videoP.replace("#",game_status.jugador < 3 ? "1" : "2");
-					if (game_status.reto_actual == "Final") game_status.personajes[game_status.jugador].casilla = 0;
+					if (game_status.reto_actual == "Final") {
+						game_status.personajes[game_status.jugador].casilla = 0;
+						game_status.jugador = game_status.turnoEnRetoFinal;
+						delete game_status.turnoEnRetoFinal;
+					}
 					videoNextPlayer(videoP);
 					break;
 			}
 			game_status.reto_actual = "";
 			break;
+		case "Recuperar":
+			switch (args) {
+				case "Si":
+					game_status = JSON.parse(localStorage.getItem("laberyntia_autoguardado"));
+					reanudarTurno();
+					break;
+				case "No":
+					localStorage.removeItem("laberyntia_autoguardado");
+					game.loadScene("MenuPrincipal");
+					break;
+			}
 		case "Codigo":
 			if (args == "Pedo") {
 				game.loadScene("MenuPrincipal");
@@ -1131,8 +1239,6 @@ function fsCommand (cmd, args) {
 }
 
 if (DEBUG) {
-	//game_status.egiptoDEBUG = true;
-
 	function debugPartidaPredefinida () {
 		for (let i = 0; i < game.nueva.form.elements.length; i++) {
 			//if (i % 2 == 0) {
@@ -1145,6 +1251,12 @@ if (DEBUG) {
 		}
 		crearPersonaje(6,"Minotauro",4);
 		game_status.jugador = -1;
+		game_status.result = 0;
+		game_status.ended = false;
+		game_status.rondas = 0;
+		game_status.casillasActivadas = [];
+		game_status.onTableroLoad = null;
+		game_status.lista_preguntas = JSON.parse(JSON.stringify(lista_preguntas)); // Duplicar lista
 		loadNextPlayer();
 
 		//game_status.jugador = 0;
@@ -1167,21 +1279,28 @@ if (DEBUG) {
 
 	function debugMedallon () {
 		let medallon = game_status.personajes[game_status.jugador].medallon;
-				if (!medallon.Roma    ) medallon.Roma     = true;
-		else if (!medallon.Grecia  ) medallon.Grecia   = true;
-		else if (!medallon.Lasislas) medallon.Lasislas = true;
-		else if (!medallon.Iberia  ) medallon.Iberia   = true;
-		else if (!medallon.Egipto  ) medallon.Egipto   = true;
+		if (!medallon.Roma    ) medallon.Roma     = true; else
+		if (!medallon.Grecia  ) medallon.Grecia   = true; else
+		if (!medallon.Lasislas) medallon.Lasislas = true; else
+		if (!medallon.Iberia  ) medallon.Iberia   = true; else
+		if (!medallon.Egipto  ) medallon.Egipto   = true;
 		game.ui.load();
 	}
 
 	function debugElegirCasilla () {
 		for (let i = 1; i <= 50; i++) callExternalInterface("activarCasilla",i);
 	}
+
+	function debugCambiarDado (num) {
+		game_status.result = num;
+		callExternalInterface("desactivarCasillas");
+		calcularCasillasActivadas();
+		initTablero();
+	}
 }
 
 // initPersonaje(num,casilla), moverACasilla(num,instant), activarCasilla(num), desactivarCasillas(), cambiarJugador(num)
 function callExternalInterface (cmd, ...args) {
 	if (DEBUG) console.log("ExternalInterface: " + cmd + "(" + args.join(',') + ")");
-	return ruffle_player.ruffle().callExternalInterface(cmd, ...args);
+	return setTimeout( () => ruffle_player.ruffle().callExternalInterface(cmd, ...args),0); // Ejecutar en el siguiente ciclo de eventos
 }

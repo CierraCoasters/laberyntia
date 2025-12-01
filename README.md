@@ -21,11 +21,9 @@ También ha sido necesario modificar algunos de los archivos Flash con [JPEXS Fr
 Esto ha permitido cambios y correcciones, pero implica que el juego puede no funcionar completamente igual que lo hacía.\
 Algunos fallos conocidos en esta versión son:
 - Falta la función de zoom del tablero de juego.
-- Faltan algunas de las preguntas tipo trivial originales del juego, y no funcionan exactamente igual. No se pueden extraer fácilmente del juego original.
-- El formulario de crear partida no permite escribir en él tras volver al menú desde una partida anterior. Recarga la página para poder escribir en él de nuevo.
-- Tras jugar mucho mucho rato, la página se puede volver un poco lenta, aparentemente por un error de limpieza incompleta de los archivos Flash que se van cerrando. Guarda la partida, cierra la pestaña y vuelve a abrir esta página en una pestaña nueva para que vuelva a la normalidad.
-- La música de fondo (midi) puede hacer cosas raras cuando la pestaña pierde el foco y cuando lo recupera.
-- La función de guardado y cargado de partidas no se ha probado aún exhaustivamente en todos los casos posibles.
+- En el minijuego de la ruleta de alimentar al Ave Fénix, hay unos pocos fotogramas en los que se puede hacer trampa y cambiar la selección.
+- Faltan algunas de las preguntas tipo trivial originales del juego. No se pueden extraer fácilmente del juego original.
+- La música de fondo (midi) puede no detenerse siempre que debe, lo cual puede llevarla a solaparse con otras pistas de música de fondo.
 
 Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.
 

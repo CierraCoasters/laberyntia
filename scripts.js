@@ -1,13 +1,14 @@
 const DEBUG = false;
 
+let opciones = {preguntasPersonalizadas: false};
+
 // TODO ENH implementar zoom tablero (requiere externalinterface y actionscript) (original permite arrastrar para mover)
-// TODO FIX congelar o desactivar ruleta tras comando "ruleta" (se puede cambiar la selección durante la narración)
-// TODO IMP [en lento progreso] extraer lista de preguntas reales
 // TODO CHK comprobar qué pasa con el nivel del jugador
 // TODO MNT función de guardado y cargado de partidas
 // TODO MNT a veces no se detiene la música al empezar otra nueva (especialmente de nueva partida a partida)
 // TODO MNT limpieza incorrecta de archivos Flash. Probablemente provocaba que la página "se ahogase" tras un rato
-// TODO ADD más preguntas personalizadas (nuevas) y opción para activarlas
+// TODO ADD continuar extrayendo preguntas originales
+// TODO ADD más preguntas personalizadas (nuevas)
 
 // Lo primero de todo, establecer un sistema para capturar los eventos creados por Ruffle al cargar Flash y poder revocarlos manualmente cuando se cierra el Flash
 let isCapturingEvents = false;
@@ -61,6 +62,10 @@ game_status = {nEquipo: 2, personajes: [], jugador: 0, result: 0, ended: false, 
 };
 
 if (localStorage.getItem("laberyntia_codigo")) game_status.sCode = localStorage.getItem("laberyntia_codigo");
+if (localStorage.getItem("laberyntia_opciones")) opciones = JSON.parse(localStorage.getItem("laberyntia_opciones"));
+function guardarOpciones () {
+	localStorage.setItem("laberyntia_opciones",JSON.stringify(opciones));
+}
 
 let retos = {}
 retos.Roma     = {juego: "roma"    , ayuda: "iroma"    , ganar: "fb1#.webm"  , perder: "f1.webm"  };
@@ -187,6 +192,9 @@ start.notesbtn = start.window.querySelector("div.notes_btn");
 start.notes = {};
 start.notes.window = start.window.querySelector("div.notes");
 start.notes.links = start.notes.window.querySelectorAll("a");
+start.notes.preguntasPersON = start.notes.window.querySelector("#preguntasPers_ON");
+start.notes.preguntasPersOFF = start.notes.window.querySelector("#preguntasPers_OFF");
+start.notes.preguntasPersLAB = start.notes.window.querySelectorAll("label");
 
 let intro = {};
 intro.window = document.querySelector("#intro");
@@ -525,6 +533,30 @@ start.notes.links.forEach( (elem) => {
 		e.stopImmediatePropagation();
 		return true;
 	});
+});
+start.notes.preguntasPersON.checked = opciones.preguntasPersonalizadas;
+start.notes.preguntasPersOFF.checked = !opciones.preguntasPersonalizadas;
+start.notes.preguntasPersON.addEventListener("click", (e) => {
+	opciones.preguntasPersonalizadas = true;
+	guardarOpciones();
+	e.stopImmediatePropagation();
+	return true;
+});
+start.notes.preguntasPersOFF.addEventListener("click", (e) => {
+	opciones.preguntasPersonalizadas = false;
+	guardarOpciones();
+	e.stopImmediatePropagation();
+	return true;
+});
+start.notes.preguntasPersLAB.forEach( (elem) => {
+	elem.addEventListener("click", (e) => {
+		e.stopImmediatePropagation();
+		return true;
+	});
+});
+
+game.codigo.addEventListener("click", () => {
+	if (game_status.sCode) intro.load(retos.Final.ganar);
 });
 
 
@@ -922,12 +954,14 @@ function jugarCasilla (num) {
 		case 45:
 		case 48:
 		case 50:
-			// Todas RANDOM {Preguntas específicas 20%, preguntas generales 5%, nada 75%}
+			// Todas RANDOM {Preguntas específicas 20%, preguntas generales 5%, nada 75%; posibilidad de activar 5% preguntas personalizadas nuevas}
 			let preguntaRandom = Math.random();
 			if (preguntaRandom >= 0.80) {
 				action = function () {preguntas(calcularLugar(game_status.personajes[game_status.jugador].casilla).replace(/\s+/,""));}
 			} else if (preguntaRandom >= 0.75) {
 				action = function () {preguntas("comun");}
+			} else if (opciones.preguntasPersonalizadas && preguntaRandom >= 0.7) {
+				action = function () {preguntas("personalizadas");}
 			}
 			break;
 		case 3:
@@ -1102,12 +1136,14 @@ function fsCommand (cmd, args) {
 		case "c":
 			if (!args) break;
 			if (isNaN(parseFloat(args)) || isNaN(args - 0)) break;
-			if (game_status.personajes[game_status.jugador].proxima != "doble") {
-				game_status.result = 0;
-			}
-			activarCasilla(args);
 			game_status.casillasActivadas = [];
 			callExternalInterface("desactivarCasillas");
+			if (game_status.personajes[game_status.jugador].proxima != "doble") {
+				game_status.result = 0;
+				activarCasilla(args);
+			} else { // Si se avanza el doble, omitir narración de la casilla
+				jugarCasilla(parseInt(args));
+			}
 			break;
 		case "intercambio":
 			// Sólamente movemos al jugador con el que nos intercambiamos. El actual se mueve por enviar el comando "c"

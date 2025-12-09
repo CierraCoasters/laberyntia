@@ -23,22 +23,33 @@
 				<div class="start_btn">Empezar juego</div>
 				<div class="notes_btn">Notas sobre el port</div>
 				<div class="notes">
+					<h1>Laberyntia</h1>
 					<p>La página que tienes delante es un port del juego "Laberyntia" de Terra Mítica para web (HTML5).</p>
+					<h2>Sobre el juego y el port</h2>
 					<p>El juego original consistía en un ejecutable de Flash Player modificado y varios archivos de Flash. Gracias a <a href="https://ruffle.rs/">Ruffle</a>, podemos recuperar los archivos Flash y hacerlos funcionar en la web.<br/>
 						El problema es que el código del ejecutable de Flash Player modificado (probablemente C++) no es fácil de recuperar, y es el que controla el juego, por lo que todo ha tenido que ser reimplementado en JavaScript.<br/>
 						También ha sido necesario modificar algunos de los archivos Flash con <a href="https://github.com/jindrapetrik/jpexs-decompiler">JPEXS Free Flash Decompiler</a> para poder controlarlos correctamente desde este código JavaScript.</p>
 					<p>Esto ha permitido cambios y correcciones, pero implica que el juego puede no funcionar completamente igual que lo hacía.<br/>
-						Algunos fallos conocidos en esta versión son:</p>
+						Algunos fallos conocidos en esta versión (en proceso de corrección) son:</p>
 					<ul>
 						<li>Falta la función de zoom del tablero de juego.</li>
-						<li>En el minijuego de la ruleta, hay unos pocos fotogramas en los que se puede hacer trampa. Sin detalles ;)</li>
 						<li>Faltan algunas de las preguntas tipo trivial originales (no son fáciles de extraer del juego).</li>
 						<li>La música de fondo (midi) a veces no se para cuando debe, y puede mezclarse una con otra.</li>
 					</ul>
-					<p>Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.</p>
+					<div>
+						<p>No obstante, también permite añadir algunas <b>preguntas nuevas</b>:</p>
+						<fieldset id="preguntasPers">
+							<input id="preguntasPers_ON" type="radio" name="preguntasPers" value="Activar">
+							<label for="preguntasPers_ON">Activar</label>
+							<input id="preguntasPers_OFF" type="radio" name="preguntasPers" value="Desactivar">
+							<label for="preguntasPers_OFF">Desactivar</label>
+						</fieldset>
+					</div>
+					<h2>Licencias/copyright</h2>
 					<p>Por último, este port no tiene por intención vulnerar la propiedad intelectual de nadie. No se reclama la propiedad sobre los archivos originales del juego, sólo sobre el código nuevo desarrollado específicamente para el port (HTML, CSS y JavaScript y algunas funciones de ActionScript (Flash) para permitir la comunicación entre el código anterior y los archivos Flash originales), que se publica con licencia CC BY-NC-SA 4.0.<br/>
 						Este juego es un claro ejemplo de <a href="https://en.wikipedia.org/wiki/Abandonware">Abandonware</a>, ya que hace años que no está a la venta (no genera ingresos a sus creadores), hay muy pocas unidades originales en circulación y además, el juego original ya no funciona en versiones modernas de Windows.<br/>
 						El único objetivo de este port es recuperar una pequeña y poco conocida parte de la historia de Terra Mítica.</p>
+					<h2>Créditos</h2>
 					<ul>
 						<li>Créditos del port: CierraCoasters (@cierracoasters <a href="https://www.youtube.com/@cierracoasters">[YT]</a> <a href="https://www.instagram.com/cierracoasters">[IG]</a>): David (programación) y Álvaro (difusión y pruebas).<br/>
 							Código específico del port licenciado con <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es">CC BY-NC-SA 4.0</a>. Contáctanos si necesitas otra licencia.</li>

@@ -21,11 +21,12 @@ También ha sido necesario modificar algunos de los archivos Flash con [JPEXS Fr
 Esto ha permitido cambios y correcciones, pero implica que el juego puede no funcionar completamente igual que lo hacía.\
 Algunos fallos conocidos en esta versión son:
 - Falta la función de zoom del tablero de juego.
-- En el minijuego de la ruleta de alimentar al Ave Fénix, hay unos pocos fotogramas en los que se puede hacer trampa y cambiar la selección.
 - Faltan algunas de las preguntas tipo trivial originales del juego. No se pueden extraer fácilmente del juego original.
 - La música de fondo (midi) puede no detenerse siempre que debe, lo cual puede llevarla a solaparse con otras pistas de música de fondo.
 
 Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.
+
+No obstante, esto también permite añadir al juego preguntas nuevas, creadas por nosotros y más ajustadas a Terra Mítica, su historia y su estado actual que las preguntas originales. Siendo algo que claramente difiere del juego original, es opcional y se puede activar en el panel de "Notas sobre el port" antes de empezar a jugar.
 
 ## Licencias del juego
 

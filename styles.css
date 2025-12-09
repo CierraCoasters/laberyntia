@@ -77,21 +77,54 @@ body {
 	}
 
 	& > .notes {
+		--font-size: 2cqh;
 		top: 5%;
 		bottom: 5%;
 		left: 5%;
 		right: 5%;
 		transform: initial;
-		padding-block: 2cqh;
-		font-size: 2.2cqh;
+		padding-block: var(--font-size);
+		font-size: var(--font-size);
 		background-color: rgba(.5,.5,.5,.75);
 
-		& > p, & > ul, & > li {
+		& > * {
 			width: initial;
 			height: initial;
-			margin: 1cqh;
+			margin: calc(var(--font-size) / 2);
 			padding: initial;
 			border: initial
+		}
+
+		& > div:has(fieldset) {
+			display: inline-flex;
+			gap: 1cqh;
+			margin-block: 0;
+
+			& > * {
+				flex: 0 0 auto;
+				width: initial;
+				height: initial;
+				margin: 0;
+				padding: initial;
+				border: initial;
+			}
+			
+			& > fieldset {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				gap: 0.5cqh;
+	
+				& > * {
+					flex: 0 1 var(--font-size);
+				}
+
+				& > input[type=radio] {
+					border: 0px;
+					width: var(--font-size);
+					height: var(--font-size);
+				}
+			}
 		}
 
 		& a, & a:visited {
@@ -107,6 +140,17 @@ body {
 		}
 	}
 }
+@media (max-width: 865px), (max-height: 620px) {
+	#start > .notes {
+		--font-size: 1.95cqh;
+	}
+}
+@media (max-width: 600px), (max-height: 450px) {
+	#start > .notes {
+		--font-size: 1.9cqh;
+	}
+}
+
 #game_window {
 	& > * {
 		position: absolute;
@@ -155,6 +199,7 @@ body {
 		right: 85%;
 		container: codigo / size;
 		font-weight: bold;
+		cursor: pointer;
 
 		& > * {
 			font-size: 18cqh;

@@ -15,7 +15,7 @@
 	}
 	dynamicallyLoadScript(thisBase + 'WebAudioFontPlayer.js',dynamicallyLoadScript(thisBase + 'MIDIFile.js',declarePublicFunctions()));
 
-	var loadedSongs = [];
+	var loadedSongs = {};
 	var currentSong = null;
 	var isPlaying = false;
 	const stepDuration = 44 / 1000;
@@ -182,5 +182,15 @@
 		console.log(window.onMidiFunctionsLoaded);
 		if (window.onMidiFunctionsLoaded) window.onMidiFunctionsLoaded();
 		window.midiFunctionsLoaded = true;
+
+		setInterval(checkOverlap,1000);
+	}
+
+	function checkOverlap () {
+		for (let idx in loadedSongs) {
+			let elem = loadedSongs[idx];
+			if (currentSong != null && currentSong != idx && elem.audioContext.state == "running")
+				elem.audioContext.suspend();
+		}
 	}
 })();

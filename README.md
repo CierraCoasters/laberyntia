@@ -22,7 +22,6 @@ Esto ha permitido cambios y correcciones, pero implica que el juego puede no fun
 Algunos fallos conocidos en esta versión son:
 - Falta la función de zoom del tablero de juego.
 - Faltan algunas de las preguntas tipo trivial originales del juego. No se pueden extraer fácilmente del juego original.
-- La música de fondo (midi) puede no detenerse siempre que debe, lo cual puede llevarla a solaparse con otras pistas de música de fondo.
 
 Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.
 

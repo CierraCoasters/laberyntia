@@ -9,6 +9,7 @@ body {
 	flex-wrap: wrap;
 	align-items: center;
 	overflow: hidden;
+	user-select: none;
 }
 #game_area {
 	width: 100%;
@@ -77,7 +78,7 @@ body {
 	}
 
 	& > .notes {
-		--font-size: 2cqh;
+		--font-size: 2.05cqh;
 		top: 5%;
 		bottom: 5%;
 		left: 5%;
@@ -142,12 +143,12 @@ body {
 }
 @media (max-width: 865px), (max-height: 620px) {
 	#start > .notes {
-		--font-size: 1.95cqh;
+		--font-size: 2cqh;
 	}
 }
 @media (max-width: 600px), (max-height: 450px) {
 	#start > .notes {
-		--font-size: 1.9cqh;
+		--font-size: 1.95cqh;
 	}
 }
 

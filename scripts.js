@@ -2,7 +2,6 @@ const DEBUG = false;
 
 let opciones = {preguntasPersonalizadas: false};
 
-// TODO ENH implementar zoom tablero (requiere externalinterface y actionscript) (original permite arrastrar para mover)
 // TODO CHK comprobar qué pasa con el nivel del jugador
 // TODO MNT función de guardado y cargado de partidas
 // TODO MNT a veces no se detiene la música al empezar otra nueva (especialmente de nueva partida a partida)
@@ -59,6 +58,8 @@ game_status = {nEquipo: 2, personajes: [], jugador: 0, result: 0, ended: false, 
 	casillasActivadas: [],
 	onTableroLoad: null,
 	muted: false,
+	zoomReq: 'auto',
+	zoomAuto: 1,
 };
 
 if (localStorage.getItem("laberyntia_codigo")) game_status.sCode = localStorage.getItem("laberyntia_codigo");
@@ -195,6 +196,8 @@ let lista_preguntas = {
 		//{pregunta: " [@]", respuesta1: "", respuesta2: "", respuesta3: "", correcta: 0},
 	],
 };
+
+document.addEventListener("contextmenu", (e) => e.preventDefault());
 
 let start = {}
 start.window = document.querySelector("#start");
@@ -398,12 +401,15 @@ game.nueva.form.comenzar = function () {
 		}
 		crearPersonaje(6,"Minotauro",4);
 	}
+	// Resetear game_status
 	game_status.jugador = -1;
 	game_status.result = 0;
 	game_status.ended = false;
-	game_status.rondas = 0;
+	game_status.rondas = 1;
 	game_status.casillasActivadas = [];
 	game_status.onTableroLoad = null;
+	game_status.zoomReq = 'auto';
+	game_status.zoomAuto = 1;
 	game_status.lista_preguntas = JSON.parse(JSON.stringify(lista_preguntas)); // Duplicar lista para poder editarla sin cambiar la original
 	loadNextPlayer();
 }
@@ -529,6 +535,9 @@ if (DEBUG) {
 	start.notesbtn.addEventListener("click", () => {
 		debugPartidaPredefinida();
 	});
+	start.notesbtn.addEventListener("contextmenu", () => {
+		start.notes.window.classList.remove("hidden");
+	});
 } else {
 	start.notesbtn.addEventListener("click", () => {
 		start.notes.window.classList.remove("hidden");
@@ -615,9 +624,32 @@ game.ui.volumen.addEventListener("click", () => {
 	}
 });
 
-game.ui.zoom.addEventListener("click", () => {
-	// TODO implementar zoom de tablero
-	ruffle_player.ruffle().displayMessage("Disponible en próximas actualizaciones");
+game.ui.zoom.addEventListener("click", (e) => {
+	switch (game_status.zoomReq) {
+		case "auto":
+			game_status.zoomReq = "min";
+			break;
+		case "min":
+			game_status.zoomReq = "auto";
+			break;
+		case "max":
+			game_status.zoomReq = "auto";
+	}
+	zoomTablero();
+});
+game.ui.zoom.addEventListener("contextmenu", (e) => {
+	switch (game_status.zoomReq) {
+		case "auto":
+			game_status.zoomReq = "max";
+			break;
+		case "min":
+			game_status.zoomReq = "auto";
+			break;
+		case "max":
+			game_status.zoomReq = "auto";
+	}
+	zoomTablero();
+	e.preventDefault();
 });
 
 game.ui.back.addEventListener("click", () => {
@@ -629,6 +661,7 @@ game.ui.back.addEventListener("click", () => {
 });
 
 game.video.player.addEventListener("click", () => {
+	if (game.video.player.currentTime < 1) return; // Impide clic accidental al terminar un reto
 	game.video.stop();
 });
 game.video.player.addEventListener("ended", () => {
@@ -670,6 +703,10 @@ function load_ruffle (url, flashvars, forceBackgroundColor) {
 	document.getElementById("flash").innerHTML = "";
 	document.getElementById("flash").appendChild(ruffle_player);
 	ruffle_player.ruffle().addFSCommandHandler(fsCommand);
+	ruffle_player.addEventListener("pointerdown", (e) => flashDragStart(e));
+	ruffle_player.addEventListener("pointermove", (e) => flashDrag(e));
+	ruffle_player.addEventListener("pointerup", (e) => flashDragEnd(e));
+	flashDragEnd(null);
 
 	ruffle_player.ruffle().load({
 		url: url,
@@ -706,6 +743,21 @@ function initTablero () {
 			callExternalInterface("activarCasilla",game_status.casillasActivadas[i]);
 		}
 	}
+	zoomTablero();
+}
+
+let lastDragCrd = {x: -1, y: -1};
+function flashDragStart (e) {
+	lastDragCrd = {x: e.layerX, y: e.layerY};
+}
+function flashDrag (e) {
+	if (lastDragCrd.x != -1 && lastDragCrd.y != -1) {
+		callExternalInterface("moverZoom", (e.layerX - lastDragCrd.x) * (1500 / game.flash.clientWidth), (e.layerY - lastDragCrd.y) * (1500 / game.flash.clientHeight));
+		lastDragCrd = {x: e.layerX, y: e.layerY};
+	}
+}
+function flashDragEnd (e) {
+	lastDragCrd = {x: -1, y: -1};
 }
 
 function preguntas (categoria, id_pregunta, consumir) {
@@ -797,6 +849,7 @@ function loadNextPlayer () {
 		if (game_status.personajes[game_status.jugador] != null && game_status.personajes[game_status.jugador].proxima == "saltar") game_status.personajes[game_status.jugador].proxima = "";
 		game_status.jugador++;
 	}
+	game_status.zoomAuto = 1;
 	localStorage.setItem("laberyntia_autoguardado",JSON.stringify(game_status));
 	loadPlayer();
 }
@@ -806,7 +859,8 @@ function loadPlayer () {
 			game_status.loadTableroTimeout = setTimeout( () => {
 				game_status.loadTableroTimeout = null;
 				game.loadScene("dado");
-			}, 2500);
+			}, 4000);
+			setTimeout( () => zoomProgresivo(2),1000);
 		};
 	} else { // Minotauro - mover automáticamente
 		game_status.onTableroLoad = () => {
@@ -829,7 +883,8 @@ function loadPlayer () {
 				}
 				callExternalInterface("moverACasilla",game_status.personajes[6].casilla);
 				//setTimeout( () => loadNextPlayer(), 5000);
-			}, 2500);
+			}, 4000);
+			setTimeout( () => zoomProgresivo(2),1000);
 		};
 	}
 	game.loadScene("tablero");
@@ -867,7 +922,34 @@ function calcularCasillasActivadas () {
 	calcularUnaCasilla(casillaActual,-1,tiradaActual);
 }
 
-var calcularLugar = function (num) {
+function zoomProgresivo (nivelFinal, pasosTotal, pasoActual, nivelInicial) {
+	if (typeof nivelInicial === 'undefined') nivelInicial = game_status.zoomAuto;
+	if (typeof pasoActual === 'undefined') pasoActual = 0;
+	if (typeof pasosTotal === 'undefined') pasosTotal = 10;
+
+	zoomTablero(nivelInicial + ((nivelFinal - nivelInicial) * ++pasoActual / pasosTotal));
+
+	if (pasoActual != pasosTotal) {
+		setTimeout(() => zoomProgresivo(nivelFinal,pasosTotal,pasoActual,nivelInicial),2000 / pasosTotal);
+	}
+}
+
+function zoomTablero (nivel) {
+	if (typeof nivel === 'undefined') nivel = game_status.zoomAuto;
+	if (nivel < 1) nivel = 1;
+	game_status.zoomAuto = nivel;
+	switch (game_status.zoomReq) {
+		case "min":
+			nivel = 1;
+			break;
+		case "max":
+			nivel = 3;
+			break;
+	} 
+	callExternalInterface("zoom",game_status.jugador,nivel);
+}
+
+function calcularLugar (num) {
 	let lugar = "";
 	if (num <= 50) lugar = "Grecia";
 	if (num <= 40) lugar = "Roma";
@@ -1217,10 +1299,6 @@ function fsCommand (cmd, args) {
 					if (typeof game_status.onTableroLoad !== 'undefined' && game_status.onTableroLoad != null) game_status.onTableroLoad();
 					game_status.onTableroLoad = null;
 					break;
-				case "onZoomEnd":
-				case "onzoomend":
-					// TODO implementar zoom
-					break;
 			}
 			break;
 		case "Ayuda":
@@ -1297,13 +1375,16 @@ if (DEBUG) {
 			//}
 		}
 		crearPersonaje(6,"Minotauro",4);
+		// Resetear game_status
 		game_status.jugador = -1;
 		game_status.result = 0;
 		game_status.ended = false;
-		game_status.rondas = 0;
+		game_status.rondas = 1;
 		game_status.casillasActivadas = [];
 		game_status.onTableroLoad = null;
-		game_status.lista_preguntas = JSON.parse(JSON.stringify(lista_preguntas)); // Duplicar lista
+		game_status.zoomReq = 'auto';
+		game_status.zoomAuto = 1;
+		game_status.lista_preguntas = JSON.parse(JSON.stringify(lista_preguntas)); // Duplicar lista para poder editarla sin cambiar la original
 		loadNextPlayer();
 
 		//game_status.jugador = 0;

@@ -19,11 +19,7 @@ El problema es que el código del ejecutable de Flash Player modificado (probabl
 También ha sido necesario modificar algunos de los archivos Flash con [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) para poder controlarlos correctamente desde este código JavaScript.
 
 Esto ha permitido cambios y correcciones, pero implica que el juego puede no funcionar completamente igual que lo hacía.\
-Algunos fallos conocidos en esta versión son:
-- Falta la función de zoom del tablero de juego.
-- Faltan algunas de las preguntas tipo trivial originales del juego. No se pueden extraer fácilmente del juego original.
-
-Todos estos fallos están en proceso de corrección, hasta donde sea posible, pero si encuentras más, no dudes en decírnoslo.
+Lo más notable es que faltan algunas de las preguntas tipo trivial originales del juego, ya que no se pueden extraer fácilmente del juego original.
 
 No obstante, esto también permite añadir al juego preguntas nuevas, creadas por nosotros y más ajustadas a Terra Mítica, su historia y su estado actual que las preguntas originales. Siendo algo que claramente difiere del juego original, es opcional y se puede activar en el panel de "Notas sobre el port" antes de empezar a jugar.
 
